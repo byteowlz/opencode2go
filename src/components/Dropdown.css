@@ -1,0 +1,121 @@
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--color-bg-panel);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  font-size: 0.75rem;
+  font-family: "JetBrains Mono", monospace;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.dropdown-trigger:hover {
+  background: var(--color-bg-element);
+  border-color: var(--color-text-muted);
+}
+
+.dropdown-trigger:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.dropdown-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+}
+
+.dropdown-arrow {
+  font-size: 0.6rem;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 2px;
+}
+
+.dropdown-menu-upward {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 2px;
+}
+
+.dropdown-option {
+  display: block;
+  width: 100%;
+  padding: 0.5rem;
+  background: none;
+  color: var(--color-text);
+  border: none;
+  font-size: 0.75rem;
+  font-family: "JetBrains Mono", monospace;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-option:hover {
+  background: var(--color-bg-element);
+}
+
+.dropdown-option.selected {
+  background: var(--color-primary);
+  color: var(--color-bg);
+}
+
+.dropdown-option.selected:hover {
+  background: var(--color-primary);
+}
+
+/* Scrollbar styling for dropdown menu */
+.dropdown-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dropdown-menu::-webkit-scrollbar-track {
+  background: var(--color-bg-panel);
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
