@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import ReactMarkdown from "react-markdown"
 import "./styles/terminal.css"
 import { openCodeService, OpenCodeMessage, OpenCodeSession, OpenCodeProvider } from "./services/opencode"
 import { ThemeSwitcher } from "./components/ThemeSwitcher"
@@ -262,7 +263,9 @@ function App() {
                 <span className="text-muted">welcome</span>
               </div>
               <div className="message-content">
-                Welcome to opencode2go! Start a conversation with your AI coding assistant.
+                <ReactMarkdown>
+                  Welcome to opencode2go! Start a conversation with your AI coding assistant.
+                </ReactMarkdown>
               </div>
             </div>
           )}
@@ -273,7 +276,9 @@ function App() {
                 <span className={`message-role ${message.role}`}>{message.role}</span>
                 <span className="text-muted">{message.timestamp.toLocaleTimeString()}</span>
               </div>
-              <div className="message-content">{message.content}</div>
+              <div className="message-content">
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+              </div>
             </div>
           ))}
 
