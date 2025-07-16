@@ -1,4 +1,5 @@
 import { AppSettings, DEFAULT_SETTINGS } from "../types/settings"
+import { getTheme, applyTheme } from "../themes"
 
 const SETTINGS_KEY = "opencode-settings"
 
@@ -20,6 +21,12 @@ class SettingsService {
         this.settings.server = { ...DEFAULT_SETTINGS.server, ...parsed.server }
         this.settings.appearance = { ...DEFAULT_SETTINGS.appearance, ...parsed.appearance }
       }
+
+      // Sync with theme switcher's storage if it exists
+      const themeSwitcherTheme = localStorage.getItem("opencode-theme")
+      if (themeSwitcherTheme && themeSwitcherTheme !== this.settings.appearance.theme) {
+        this.settings.appearance.theme = themeSwitcherTheme
+      }
     } catch (error) {
       console.error("Failed to load settings:", error)
       this.settings = DEFAULT_SETTINGS
@@ -39,6 +46,12 @@ class SettingsService {
 
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.settings))
+      
+      // Sync theme with theme switcher's storage
+      if (newSettings.appearance?.theme) {
+        localStorage.setItem("opencode-theme", newSettings.appearance.theme)
+      }
+      
       this.applySettings()
     } catch (error) {
       console.error("Failed to save settings:", error)
@@ -55,16 +68,26 @@ class SettingsService {
   }
 
   private applySettings(): void {
+    // Apply theme settings
+    const { theme } = this.settings.appearance
+    const resolvedTheme = getTheme(theme, 'dark') // Always use dark mode for now
+    applyTheme(resolvedTheme)
+
     // Apply font settings
     const root = document.documentElement
     const { font, fontSize } = this.settings.appearance
 
     // Update font family
     const fontStack = this.getFontStack(font)
+    console.log('Applying font:', font, 'with stack:', fontStack)
     root.style.setProperty("--font-mono", fontStack)
 
     // Update font size
+    console.log('Applying font size:', fontSize)
     root.style.setProperty("--font-size-base", `${fontSize}px`)
+    
+    // Force a repaint to ensure changes take effect
+    root.offsetHeight
 
     // Scale other font sizes proportionally
     root.style.setProperty("--font-size-xs", `${fontSize * 0.75}px`)
@@ -79,18 +102,24 @@ class SettingsService {
       "Fira Code",
       "SF Mono",
       "Monaco",
+      "Menlo",
       "Inconsolata",
       "Roboto Mono",
       "Consolas",
+      "Courier New",
       "monospace",
     ]
 
     // Remove the primary font from fallbacks to avoid duplication
     const filteredFallbacks = fallbacks.filter((font) => font !== primaryFont)
 
-    return `"${primaryFont}", ${filteredFallbacks
+    // Always start with the primary font, then add fallbacks
+    const fontStack = [primaryFont, ...filteredFallbacks]
       .map((font) => (font === "monospace" ? font : `"${font}"`))
-      .join(", ")}`
+      .join(", ")
+
+    console.log('Generated font stack:', fontStack)
+    return fontStack
   }
 
   resetSettings(): void {

@@ -397,7 +397,7 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 3px;
   font-size: 0.75rem;
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--font-mono);
   cursor: pointer;
   transition: all 0.2s ease;
   min-width: 24px;

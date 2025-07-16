@@ -6,7 +6,7 @@ import { ThemeSwitcher } from "./components/ThemeSwitcher"
 import { Dropdown } from "./components/Dropdown"
 import { Settings } from "./components/Settings"
 import { AppSettings } from "./types/settings"
-
+import { Wrench } from "lucide-react"
 function App() {
   const [messages, setMessages] = useState<OpenCodeMessage[]>([])
   const [input, setInput] = useState("")
@@ -76,10 +76,10 @@ function App() {
                 prevSessions.map((session) =>
                   session.id === updatedSession.id
                     ? {
-                        ...session,
-                        title: updatedSession.title,
-                        updated: new Date(updatedSession.time.updated * 1000),
-                      }
+                      ...session,
+                      title: updatedSession.title,
+                      updated: new Date(updatedSession.time.updated * 1000),
+                    }
                     : session,
                 ),
               )
@@ -88,10 +88,10 @@ function App() {
               setCurrentSession((prevSession) =>
                 prevSession && prevSession.id === updatedSession.id
                   ? {
-                      ...prevSession,
-                      title: updatedSession.title,
-                      updated: new Date(updatedSession.time.updated * 1000),
-                    }
+                    ...prevSession,
+                    title: updatedSession.title,
+                    updated: new Date(updatedSession.time.updated * 1000),
+                  }
                   : prevSession,
               )
             }
@@ -243,14 +243,8 @@ function App() {
         <div className="terminal-title">opencode2go</div>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <button className="settings-button-header" onClick={() => setIsSettingsOpen(true)} title="Settings">
-            ⚙️
+            <Wrench size={16} />
           </button>
-          <ThemeSwitcher />
-          <div className="terminal-controls">
-            <button className="terminal-button close" />
-            <button className="terminal-button minimize" />
-            <button className="terminal-button maximize" />
-          </div>
         </div>
       </div>
 
@@ -264,7 +258,7 @@ function App() {
               </div>
               <div className="message-content">
                 <ReactMarkdown>
-                  Welcome to opencode2go! Start a conversation with your AI coding assistant.
+                  Hi. What are we building today?
                 </ReactMarkdown>
               </div>
             </div>

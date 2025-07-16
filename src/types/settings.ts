@@ -33,6 +33,11 @@ export const AVAILABLE_FONTS = [
   "Roboto Mono",
   "Consolas",
   "Courier New",
+  "Menlo",
+  "Source Code Pro",
+  "Ubuntu Mono",
+  "Cascadia Code",
+  "monospace",
 ]
 
 export const FONT_SIZES = [

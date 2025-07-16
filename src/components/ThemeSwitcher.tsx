@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { getTheme, getThemeNames, applyTheme, themes } from "../themes"
+import { settingsService } from "../services/settings"
 
 interface ThemeSwitcherProps {
   onThemeChange?: (themeName: string) => void
@@ -9,9 +10,10 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ onThemeChange }) =
   const [currentTheme, setCurrentTheme] = useState("dracula")
   const [isOpen, setIsOpen] = useState(false)
 
-  // Load theme from localStorage on mount
+  // Load theme from settings service on mount
   useEffect(() => {
-    const savedTheme = localStorage.getItem("opencode-theme") || "dracula"
+    const settings = settingsService.getSettings()
+    const savedTheme = settings.appearance.theme
     setCurrentTheme(savedTheme)
     const theme = getTheme(savedTheme)
     applyTheme(theme)
@@ -20,7 +22,16 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ onThemeChange }) =
 
   const handleThemeChange = (themeName: string) => {
     setCurrentTheme(themeName)
-    localStorage.setItem("opencode-theme", themeName)
+    
+    // Update settings service
+    const currentSettings = settingsService.getSettings()
+    settingsService.saveSettings({
+      ...currentSettings,
+      appearance: {
+        ...currentSettings.appearance,
+        theme: themeName
+      }
+    })
 
     const theme = getTheme(themeName)
     applyTheme(theme)

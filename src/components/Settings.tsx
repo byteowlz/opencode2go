@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react"
 import { AppSettings, AVAILABLE_FONTS, FONT_SIZES } from "../types/settings"
 import { settingsService } from "../services/settings"
-import { getThemeNames, themes } from "../themes"
+import { getThemeNames, themes, getTheme, applyTheme } from "../themes"
 import { Dropdown } from "./Dropdown"
 
 interface SettingsProps {
@@ -31,6 +31,8 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSettingsC
 
   const handleCancel = () => {
     setTempSettings(settings)
+    // Revert any preview changes
+    settingsService.saveSettings(settings)
     onClose()
   }
 
@@ -53,13 +55,63 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSettingsC
   }
 
   const updateAppearanceSettings = (field: keyof AppSettings["appearance"], value: string | number) => {
-    setTempSettings((prev) => ({
-      ...prev,
+    const newTempSettings = {
+      ...tempSettings,
       appearance: {
-        ...prev.appearance,
+        ...tempSettings.appearance,
         [field]: value,
       },
-    }))
+    }
+    setTempSettings(newTempSettings)
+    
+    // Apply settings immediately for preview (without saving to localStorage)
+    if (field === "theme") {
+      const theme = getTheme(value as string, 'dark')
+      applyTheme(theme)
+      // Also sync with theme switcher storage for consistency
+      localStorage.setItem("opencode-theme", value as string)
+    } else if (field === "font" || field === "fontSize") {
+      // Apply font changes immediately
+      const root = document.documentElement
+      if (field === "font") {
+        const fontStack = getFontStack(value as string)
+        console.log('Settings preview - applying font:', value, 'with stack:', fontStack)
+        root.style.setProperty("--font-mono", fontStack)
+        // Force repaint
+        root.offsetHeight
+      } else if (field === "fontSize") {
+        const fontSize = value as number
+        console.log('Settings preview - applying font size:', fontSize)
+        root.style.setProperty("--font-size-base", `${fontSize}px`)
+        root.style.setProperty("--font-size-xs", `${fontSize * 0.75}px`)
+        root.style.setProperty("--font-size-sm", `${fontSize * 0.875}px`)
+        root.style.setProperty("--font-size-lg", `${fontSize * 1.125}px`)
+        root.style.setProperty("--font-size-xl", `${fontSize * 1.25}px`)
+        // Force repaint
+        root.offsetHeight
+      }
+    }
+  }
+
+  const getFontStack = (primaryFont: string): string => {
+    const fallbacks = [
+      "JetBrains Mono",
+      "Fira Code",
+      "SF Mono",
+      "Monaco",
+      "Menlo",
+      "Inconsolata",
+      "Roboto Mono",
+      "Consolas",
+      "Courier New",
+      "monospace",
+    ]
+    const filteredFallbacks = fallbacks.filter((font) => font !== primaryFont)
+    const fontStack = [primaryFont, ...filteredFallbacks]
+      .map((font) => (font === "monospace" ? font : `"${font}"`))
+      .join(", ")
+    console.log('Settings preview font stack:', fontStack)
+    return fontStack
   }
 
   if (!isOpen) return null
