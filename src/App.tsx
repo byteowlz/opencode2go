@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react"
 import ReactMarkdown from "react-markdown"
 import "./styles/terminal.css"
-import { openCodeService, OpenCodeMessage, OpenCodeSession, OpenCodeProvider } from "./services/opencode"
-import { ThemeSwitcher } from "./components/ThemeSwitcher"
+import { openCodeService, OpenCodeMessage, OpenCodeSession, OpenCodeProvider, OpenCodeMode } from "./services/opencode"
 import { Dropdown } from "./components/Dropdown"
 import { Settings } from "./components/Settings"
 import { AppSettings } from "./types/settings"
 import { Wrench } from "lucide-react"
+import { settingsService } from "./services/settings"
+import { getTheme } from "./themes"
 function App() {
   const [messages, setMessages] = useState<OpenCodeMessage[]>([])
   const [input, setInput] = useState("")
@@ -17,7 +18,56 @@ function App() {
   const [providers, setProviders] = useState<OpenCodeProvider[]>([])
   const [selectedProvider, setSelectedProvider] = useState<string>("")
   const [selectedModel, setSelectedModel] = useState<string>("")
+  const [selectedMode, setSelectedMode] = useState<string>("build")
+  const [modes, setModes] = useState<OpenCodeMode[]>([])
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [logoSrc, setLogoSrc] = useState("/logo_white.svg")
+  const [isNarrowScreen, setIsNarrowScreen] = useState(false)
+
+  // Update logo when theme changes and handle screen size
+  useEffect(() => {
+    const updateLogo = () => {
+      const settings = settingsService.getSettings()
+      const theme = getTheme(settings.appearance.theme)
+      
+      // Simple heuristic: if background is lighter than text, it's a light theme
+      const bgBrightness = parseInt(theme.colors.background.slice(1), 16)
+      const textBrightness = parseInt(theme.colors.text.slice(1), 16)
+      const isLightTheme = bgBrightness > textBrightness
+      
+      setLogoSrc(isLightTheme ? "/logo_black.svg" : "/logo_white.svg")
+    }
+    
+    const handleResize = () => {
+      setIsNarrowScreen(window.innerWidth < 768)
+    }
+    
+    updateLogo()
+    handleResize()
+    
+    // Listen for theme changes and window resize
+    const handleStorageChange = () => {
+      updateLogo()
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+
+  // Logo component that switches based on theme
+  const Logo = () => {
+    return (
+      <img 
+        src={logoSrc} 
+        alt="opencode2go" 
+        style={{ height: "20px", width: "auto" }}
+      />
+    )
+  }
 
   // Initialize connection and load data
   useEffect(() => {
@@ -28,6 +78,13 @@ function App() {
       if (connected) {
         const { providers: providersData, defaults } = await openCodeService.getProviders()
         setProviders(providersData)
+
+        // Load available modes
+        const modesData = await openCodeService.getModes()
+        setModes(modesData)
+        if (modesData.length > 0) {
+          setSelectedMode(modesData[0].name)
+        }
 
         // Set default provider and model using TUI logic
         if (providersData.length > 0) {
@@ -149,6 +206,7 @@ function App() {
         userMessage.content,
         selectedProvider,
         selectedModel,
+        selectedMode,
       )
 
       if (response) {
@@ -195,9 +253,15 @@ function App() {
       setIsConnected(connected)
 
       if (connected) {
-        // Reload providers and sessions with new server
+        // Reload providers, modes, and sessions with new server
         const { providers: providersData, defaults } = await openCodeService.getProviders()
         setProviders(providersData)
+
+        const modesData = await openCodeService.getModes()
+        setModes(modesData)
+        if (modesData.length > 0) {
+          setSelectedMode(modesData[0].name)
+        }
 
         if (providersData.length > 0) {
           let defaultProvider = providersData.find((p) => p.id === "anthropic") || providersData[0]
@@ -237,10 +301,38 @@ function App() {
 
   const selectedProviderObj = providers.find((p) => p.id === selectedProvider)
 
+  // Create combined dropdown options for narrow screens
+  const getCombinedOptions = () => {
+    const options: { value: string; label: string }[] = []
+    
+    modes.forEach(mode => {
+      providers.forEach(provider => {
+        provider.models.forEach(model => {
+          const value = `${mode.name}|${provider.id}|${model.id}`
+          const label = `${mode.name.charAt(0).toUpperCase() + mode.name.slice(1)} • ${provider.name} • ${model.name.length > 10 ? model.name.substring(0, 10) + "..." : model.name}`
+          options.push({ value, label })
+        })
+      })
+    })
+    
+    return options
+  }
+
+  const handleCombinedChange = (value: string) => {
+    const [mode, providerId, modelId] = value.split('|')
+    setSelectedMode(mode)
+    setSelectedProvider(providerId)
+    setSelectedModel(modelId)
+  }
+
+  const getCurrentCombinedValue = () => {
+    return `${selectedMode}|${selectedProvider}|${selectedModel}`
+  }
+
   return (
     <div className="terminal-window">
       <div className="terminal-header">
-        <div className="terminal-title">opencode2go</div>
+        <div className="terminal-title"><Logo /></div>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <button className="settings-button-header" onClick={() => setIsSettingsOpen(true)} title="Settings">
             <Wrench size={16} />
@@ -329,32 +421,58 @@ function App() {
           </div>
         </div>
         <div className="status-right">
-          <div className="status-item">
-            <span>Provider:</span>
-            <Dropdown
-              options={providers.map((provider) => ({
-                value: provider.id,
-                label: provider.name,
-              }))}
-              value={selectedProvider}
-              onChange={handleProviderChange}
-              maxWidth="100px"
-            />
-          </div>
-          <div className="status-item">
-            <span>Model:</span>
-            <Dropdown
-              options={
-                selectedProviderObj?.models.map((model) => ({
-                  value: model.id,
-                  label: model.name.length > 15 ? model.name.substring(0, 15) + "..." : model.name,
-                })) || []
-              }
-              value={selectedModel}
-              onChange={setSelectedModel}
-              maxWidth="120px"
-            />
-          </div>
+          {isNarrowScreen ? (
+            <div className="status-item">
+              <span>Config:</span>
+              <Dropdown
+                options={getCombinedOptions()}
+                value={getCurrentCombinedValue()}
+                onChange={handleCombinedChange}
+                maxWidth="200px"
+              />
+            </div>
+          ) : (
+            <>
+              <div className="status-item">
+                <span>Mode:</span>
+                <Dropdown
+                  options={modes.map((mode) => ({
+                    value: mode.name,
+                    label: mode.name.charAt(0).toUpperCase() + mode.name.slice(1),
+                  }))}
+                  value={selectedMode}
+                  onChange={setSelectedMode}
+                  maxWidth="80px"
+                />
+              </div>
+              <div className="status-item">
+                <span>Provider:</span>
+                <Dropdown
+                  options={providers.map((provider) => ({
+                    value: provider.id,
+                    label: provider.name,
+                  }))}
+                  value={selectedProvider}
+                  onChange={handleProviderChange}
+                  maxWidth="100px"
+                />
+              </div>
+              <div className="status-item">
+                <span>Model:</span>
+                <Dropdown
+                  options={
+                    selectedProviderObj?.models.map((model) => ({
+                      value: model.id,
+                      label: model.name.length > 15 ? model.name.substring(0, 15) + "..." : model.name,
+                    })) || []
+                  }
+                  value={selectedModel}
+                  onChange={setSelectedModel}
+                  maxWidth="120px"
+                />
+              </div>
+            </>
+          )}
           <div className="status-item">
             <span>v0.1.0</span>
           </div>

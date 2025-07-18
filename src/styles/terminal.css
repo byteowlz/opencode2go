@@ -88,7 +88,6 @@ body {
 .terminal-button {
   width: 12px;
   height: 12px;
-  border-radius: 50%;
   border: none;
   cursor: pointer;
 }
@@ -108,7 +107,6 @@ body {
   border: 1px solid var(--color-border);
   color: var(--color-text);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: var(--font-size-base);
   transition: all 0.2s ease;
@@ -208,7 +206,6 @@ body {
   background-color: var(--color-bg-element);
   color: var(--color-accent);
   padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: 0.9em;
 }
@@ -216,7 +213,6 @@ body {
 .message-content pre {
   background-color: var(--color-bg-element);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
   padding: var(--space-3);
   margin: var(--space-3) 0;
   overflow-x: auto;
@@ -372,10 +368,47 @@ body {
   gap: var(--space-1);
 }
 
+/* Responsive status bar for narrow screens */
+@media (max-width: 768px) {
+  .status-bar {
+    padding: var(--space-2);
+    gap: var(--space-2);
+  }
+  
+  .status-left,
+  .status-right {
+    gap: var(--space-2);
+  }
+  
+  .status-item {
+    font-size: var(--font-size-xs);
+  }
+  
+  .status-item span {
+    display: none;
+  }
+  
+  .status-item:first-child span {
+    display: inline;
+  }
+}
+
+@media (max-width: 480px) {
+  .status-bar {
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: stretch;
+  }
+  
+  .status-left,
+  .status-right {
+    justify-content: center;
+  }
+}
+
 .status-indicator {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
 }
 
 .status-indicator.connected {
@@ -395,7 +428,6 @@ body {
   background: var(--bg-color);
   color: var(--text-color);
   border: 1px solid var(--border-color);
-  border-radius: 3px;
   font-size: 0.75rem;
   font-family: var(--font-mono);
   cursor: pointer;
@@ -428,7 +460,6 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
-  border-radius: var(--radius-sm);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -441,7 +472,6 @@ body {
   width: 12px;
   height: 12px;
   border: 2px solid var(--color-border-subtle);
-  border-radius: 50%;
   border-top-color: var(--color-primary);
   animation: spin 1s ease-in-out infinite;
 }
@@ -510,12 +540,12 @@ body {
   transform: translate(-50%, -50%);
   background-color: var(--color-bg-panel);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   z-index: 1001;
   width: 90%;
+  min-height: 70vh;
   max-width: 600px;
-  max-height: 80vh;
+  max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -598,7 +628,6 @@ body {
   color: var(--color-text);
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
-  border-radius: var(--radius-sm);
   outline: none;
   transition: border-color 0.2s ease;
 }
@@ -617,7 +646,6 @@ body {
   padding: var(--space-2) var(--space-3);
   background-color: var(--color-bg-element);
   border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   font-family: var(--font-mono);
@@ -647,7 +675,6 @@ body {
   font-size: var(--font-size-sm);
   font-weight: 500;
   cursor: pointer;
-  border-radius: var(--radius-sm);
   transition: all 0.2s ease;
 }
 
@@ -695,7 +722,6 @@ body {
   font-size: var(--font-size-sm);
   cursor: pointer;
   transition: all 0.2s ease;
-  border-radius: var(--radius-sm);
 }
 
 .theme-switcher-button:hover {
@@ -736,7 +762,6 @@ body {
   margin-top: var(--space-1);
   background-color: var(--color-bg-panel);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   z-index: 1000;
   min-width: 280px;
@@ -791,7 +816,6 @@ body {
   flex-shrink: 0;
   width: 32px;
   height: 20px;
-  border-radius: var(--radius-sm);
   overflow: hidden;
   border: 1px solid var(--color-border-subtle);
 }
@@ -821,7 +845,6 @@ body {
 .color-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 

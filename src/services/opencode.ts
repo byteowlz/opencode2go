@@ -27,6 +27,16 @@ export interface OpenCodeModel {
   name: string
 }
 
+export interface OpenCodeMode {
+  name: string
+  model?: {
+    modelID: string
+    providerID: string
+  }
+  prompt?: string
+  tools: Record<string, boolean>
+}
+
 class OpenCodeService {
   private client: Opencode
   private baseUrl: string
@@ -122,6 +132,39 @@ class OpenCodeService {
     }
   }
 
+  async getModes(): Promise<OpenCodeMode[]> {
+    try {
+      const response = await tauriHttpClient.get(`${this.baseUrl}/config/modes`)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch modes: ${response.status}`)
+      }
+      const modes = await response.json()
+      return modes.map((mode: any) => ({
+        name: mode.name,
+        model: mode.model,
+        prompt: mode.prompt,
+        tools: mode.tools || {},
+      }))
+    } catch (error: unknown) {
+      console.error("Failed to get modes:", error)
+      // Return default modes if API call fails
+      return [
+        {
+          name: "build",
+          tools: {},
+        },
+        {
+          name: "plan",
+          tools: {
+            write: false,
+            edit: false,
+            patch: false,
+          },
+        },
+      ]
+    }
+  }
+
   async getSessions(): Promise<OpenCodeSession[]> {
     try {
       const sessions = await this.client.session.list()
@@ -196,6 +239,7 @@ class OpenCodeService {
     content: string,
     providerID: string,
     modelID: string,
+    mode: string = "build",
   ): Promise<OpenCodeMessage | null> {
     try {
       console.log("Sending message with params:", { sessionId, content, providerID, modelID })
@@ -207,7 +251,7 @@ class OpenCodeService {
         messageID,
         providerID,
         modelID,
-        mode: "build",
+        mode,
         parts: [
           {
             id: partID,
