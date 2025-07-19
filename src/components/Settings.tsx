@@ -142,7 +142,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSettingsC
                 ]}
                 value={tempSettings.server.protocol}
                 onChange={(value) => updateServerSettings("protocol", value as "http" | "https")}
-                maxWidth="100px"
+                maxWidth="150px"
               />
             </div>
             <div className="settings-group">

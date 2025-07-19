@@ -1,0 +1,105 @@
+.cycling-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  background: var(--color-bg-panel);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cycling-button:hover {
+  background: var(--color-bg-element);
+  border-color: var(--color-primary);
+  transform: scale(1.02);
+}
+
+.cycling-button:active {
+  transform: scale(0.98);
+}
+
+.cycling-button.animating {
+  background: var(--color-primary);
+  color: var(--color-bg);
+  transform: scale(1.05);
+}
+
+.cycling-button-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.cycling-button-indicator {
+  font-size: 10px;
+  opacity: 0.7;
+  line-height: 1;
+  color: var(--color-text-muted);
+}
+
+.cycling-button:hover .cycling-button-indicator {
+  opacity: 1;
+}
+
+.cycling-button.animating .cycling-button-indicator {
+  color: var(--color-bg);
+  opacity: 0.8;
+}
+
+/* Disabled state for single option */
+.cycling-button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.cycling-button:disabled:hover {
+  transform: none;
+  background: var(--color-bg-panel);
+  border-color: var(--color-border);
+}
+
+/* Mobile responsive improvements */
+@media (max-width: 768px) {
+  .cycling-button {
+    padding: 6px 10px;
+    min-height: 36px;
+    min-width: 70px;
+  }
+  
+  .cycling-button-label {
+    font-size: var(--font-size-sm);
+    margin-bottom: 3px;
+  }
+  
+  .cycling-button-indicator {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cycling-button {
+    padding: 8px 12px;
+    min-height: 40px;
+    min-width: 80px;
+  }
+  
+  .cycling-button-label {
+    font-size: var(--font-size-base);
+    margin-bottom: 4px;
+  }
+  
+  .cycling-button-indicator {
+    font-size: 12px;
+  }
+}

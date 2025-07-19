@@ -2,11 +2,42 @@ import { Opencode } from "@opencode-ai/sdk"
 import { settingsService } from "./settings"
 import { tauriHttpClient, tauriFetch } from "./http"
 
+export interface OpenCodePart {
+  id: string
+  type: "text" | "tool" | "tool-invocation" | "step-start" | "step-finish" | "file" | "snapshot"
+  text?: string
+  tool?: string
+  filename?: string
+  snapshot?: {
+    id: string
+    title?: string
+    url?: string
+    data?: any
+  }
+  invocation?: {
+    tool: string
+    input: any
+  }
+  state?: {
+    status: "pending" | "running" | "completed" | "error"
+    error?: string
+    time?: {
+      start: number
+      end: number
+    }
+    input?: any
+    output?: any
+  }
+}
+
 export interface OpenCodeMessage {
   id: string
   role: "user" | "assistant"
   content: string
+  parts: OpenCodePart[]
   timestamp: Date
+  providerID?: string
+  modelID?: string
 }
 
 export interface OpenCodeSession {
@@ -134,20 +165,47 @@ class OpenCodeService {
 
   async getModes(): Promise<OpenCodeMode[]> {
     try {
+      console.log("=== FETCHING MODES ===")
+      console.log("Base URL:", this.baseUrl)
+      console.log("Full modes URL:", `${this.baseUrl}/config/modes`)
+      
       const response = await tauriHttpClient.get(`${this.baseUrl}/config/modes`)
+      console.log("Modes response status:", response.status, response.statusText)
+      
       if (!response.ok) {
-        throw new Error(`Failed to fetch modes: ${response.status}`)
+        console.error("Modes request failed with status:", response.status)
+        const errorText = await response.text()
+        console.error("Error response body:", errorText)
+        throw new Error(`Failed to fetch modes: ${response.status} - ${errorText}`)
       }
+      
       const modes = await response.json()
-      return modes.map((mode: any) => ({
+      console.log("Raw modes response:", modes)
+      
+      const processedModes = modes.map((mode: any) => ({
         name: mode.name,
         model: mode.model,
         prompt: mode.prompt,
         tools: mode.tools || {},
       }))
+      
+      console.log("Processed modes:", processedModes)
+      console.log("=== MODES FETCH SUCCESS ===")
+      
+      return processedModes
     } catch (error: unknown) {
+      console.error("=== MODES FETCH FAILED ===")
       console.error("Failed to get modes:", error)
+      const errorObj = error as any
+      console.error("Error details:", {
+        message: errorObj?.message,
+        status: errorObj?.status,
+        baseUrl: this.baseUrl,
+        stack: errorObj?.stack,
+      })
+      
       // Return default modes if API call fails
+      console.log("Returning default modes")
       return [
         {
           name: "build",
@@ -167,15 +225,34 @@ class OpenCodeService {
 
   async getSessions(): Promise<OpenCodeSession[]> {
     try {
+      console.log("=== FETCHING SESSIONS ===")
+      console.log("Base URL:", this.baseUrl)
+      
       const sessions = await this.client.session.list()
-      return sessions.map((session) => ({
+      console.log("Raw sessions response:", sessions)
+      console.log("Number of sessions found:", sessions.length)
+      
+      const processedSessions = sessions.map((session) => ({
         id: session.id,
         title: session.title,
         created: new Date(session.time.created * 1000),
         updated: new Date(session.time.updated * 1000),
       }))
+      
+      console.log("Processed sessions:", processedSessions)
+      console.log("=== SESSIONS FETCH SUCCESS ===")
+      
+      return processedSessions
     } catch (error: unknown) {
+      console.error("=== SESSIONS FETCH FAILED ===")
       console.error("Failed to get sessions:", error)
+      const errorObj = error as any
+      console.error("Error details:", {
+        message: errorObj?.message,
+        status: errorObj?.status,
+        baseUrl: this.baseUrl,
+        stack: errorObj?.stack,
+      })
       return []
     }
   }
@@ -202,29 +279,32 @@ class OpenCodeService {
 
       for (const message of messages) {
         const messageInfo = (message as any).info
-        if (messageInfo.role === "user") {
-          // User message
-          const textParts = message.parts.filter((part) => part.type === "text")
-          if (textParts.length > 0) {
-            result.push({
-              id: messageInfo.id,
-              role: "user",
-              content: textParts.map((part) => (part as any).text).join("\n"),
-              timestamp: new Date(messageInfo.time.created * 1000),
-            })
-          }
-        } else if (messageInfo.role === "assistant") {
-          // Assistant message
-          const textParts = message.parts.filter((part) => part.type === "text")
-          if (textParts.length > 0) {
-            result.push({
-              id: messageInfo.id,
-              role: "assistant",
-              content: textParts.map((part) => (part as any).text).join("\n"),
-              timestamp: new Date(messageInfo.time.created * 1000),
-            })
-          }
-        }
+        
+        // Convert all parts to our format
+        const parts: OpenCodePart[] = message.parts.map((part: any) => ({
+          id: part.id,
+          type: part.type,
+          text: part.text,
+          tool: part.tool,
+          filename: part.filename,
+          snapshot: part.snapshot,
+          invocation: part.invocation,
+          state: part.state
+        }))
+
+        // Create content from text parts for backward compatibility
+        const textParts = message.parts.filter((part: any) => part.type === "text")
+        const content = textParts.map((part: any) => part.text).join("\n")
+
+        result.push({
+          id: messageInfo.id,
+          role: messageInfo.role,
+          content,
+          parts,
+          timestamp: new Date(messageInfo.time.created * 1000),
+          providerID: messageInfo.providerID,
+          modelID: messageInfo.modelID,
+        })
       }
 
       return result.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
@@ -239,10 +319,16 @@ class OpenCodeService {
     content: string,
     providerID: string,
     modelID: string,
-    mode: string = "build",
+    mode: string = "build"
   ): Promise<OpenCodeMessage | null> {
     try {
-      console.log("Sending message with params:", { sessionId, content, providerID, modelID })
+      console.log("=== SENDING MESSAGE ===")
+      console.log("Base URL:", this.baseUrl)
+      console.log("Session ID:", sessionId)
+      console.log("Provider ID:", providerID)
+      console.log("Model ID:", modelID)
+      console.log("Mode:", mode)
+      console.log("Content:", content)
 
       const messageID = `msg_${Date.now()}`
       const partID = `part_${Date.now()}`
@@ -263,22 +349,33 @@ class OpenCodeService {
         ],
       }
 
-      console.log("Sending request to /session/:id/message:", requestBody)
+      const fullUrl = `${this.baseUrl}/session/${sessionId}/message`
+      console.log("Full URL:", fullUrl)
+      console.log("Request body:", JSON.stringify(requestBody, null, 2))
 
+      // Use Tauri HTTP client to avoid CORS issues
       const response = await tauriHttpClient.post(`${this.baseUrl}/session/${sessionId}/message`, {
-        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
       })
 
+      console.log("Response status:", response.status, response.statusText)
+      console.log("Response headers:", response.headers)
+
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error("Error response:", errorText)
-        throw new Error(`${response.status} ${errorText}`)
+        let errorText = "Unknown error"
+        try {
+          errorText = await response.text()
+        } catch (e) {
+          console.error("Failed to read error response:", e)
+        }
+        console.error("HTTP Error:", response.status, response.statusText, errorText)
+        throw new Error(`HTTP ${response.status}: ${errorText}`)
       }
 
+      // For now, let's handle as regular JSON response since Tauri HTTP client may not support streaming the same way
       const data = await response.json()
       console.log("Chat response received:", data)
 
@@ -290,12 +387,30 @@ class OpenCodeService {
         if (textParts.length > 0) {
           responseContent = textParts.map((part: any) => part.text).join("\n")
         }
+      } else if (typeof data === 'string') {
+        responseContent = data
+      } else if (data && data.content) {
+        responseContent = data.content
       }
 
       return {
         id: data.id || messageID,
         role: "assistant",
         content: responseContent,
+        parts: data.parts ? data.parts.map((part: any) => ({
+          id: part.id,
+          type: part.type,
+          text: part.text,
+          tool: part.tool,
+          filename: part.filename,
+          snapshot: part.snapshot,
+          invocation: part.invocation,
+          state: part.state
+        })) : [{
+          id: `part_${Date.now()}`,
+          type: "text",
+          text: responseContent
+        }],
         timestamp: new Date(data.time?.created ? data.time.created * 1000 : Date.now()),
       }
     } catch (error: unknown) {
@@ -308,6 +423,11 @@ class OpenCodeService {
         id: `msg_${Date.now() + 1}`,
         role: "assistant",
         content: `Error: ${errorObj?.message || "Unknown error occurred"}`,
+        parts: [{
+          id: `part_${Date.now() + 1}`,
+          type: "text",
+          text: `Error: ${errorObj?.message || "Unknown error occurred"}`
+        }],
         timestamp: new Date(),
       }
     }

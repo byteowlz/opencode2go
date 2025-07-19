@@ -193,6 +193,11 @@ function App() {
       id: Date.now().toString(),
       role: "user",
       content: input.trim(),
+      parts: [{
+        id: `part_${Date.now()}`,
+        type: "text",
+        text: input.trim()
+      }],
       timestamp: new Date(),
     }
 
@@ -219,6 +224,11 @@ function App() {
         role: "assistant",
         content:
           "Sorry, I encountered an error while processing your message. Please make sure the opencode server is running.",
+        parts: [{
+          id: `part_${Date.now() + 1}`,
+          type: "text",
+          text: "Sorry, I encountered an error while processing your message. Please make sure the opencode server is running."
+        }],
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, errorMessage])
