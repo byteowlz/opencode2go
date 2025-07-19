@@ -1,12 +1,17 @@
 import { useState, useEffect } from "react"
-import ReactMarkdown from "react-markdown"
 import "./styles/terminal.css"
 import { openCodeService, OpenCodeMessage, OpenCodeSession, OpenCodeProvider, OpenCodeMode } from "./services/opencode"
-import { Dropdown } from "./components/Dropdown"
 import { Settings } from "./components/Settings"
+import { Sidebar } from "./components/Sidebar"
+import { ServerManager } from "./components/ServerManager"
+import { MessagePart } from "./components/MessagePart"
+import { MessageFilter } from "./components/MessageFilter"
+import { CyclingButton } from "./components/CyclingButton"
 import { AppSettings } from "./types/settings"
-import { Wrench } from "lucide-react"
+import { OpenCodeServer } from "./types/servers"
+import { Wrench, Menu } from "lucide-react"
 import { settingsService } from "./services/settings"
+import { serversService } from "./services/servers"
 import { getTheme } from "./themes"
 function App() {
   const [messages, setMessages] = useState<OpenCodeMessage[]>([])
@@ -22,9 +27,33 @@ function App() {
   const [modes, setModes] = useState<OpenCodeMode[]>([])
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [logoSrc, setLogoSrc] = useState("/logo_white.svg")
-  const [isNarrowScreen, setIsNarrowScreen] = useState(false)
+  
+  // New state for sidebar and server management
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isServerManagerOpen, setIsServerManagerOpen] = useState(false)
+  const [servers, setServers] = useState<OpenCodeServer[]>([])
+  const [currentServer, setCurrentServer] = useState<OpenCodeServer | null>(null)
+  
+  // Message filter state
+  const [messageFilters, setMessageFilters] = useState<{
+    text: boolean
+    tool: boolean
+    "tool-invocation": boolean
+    "step-start": boolean
+    "step-finish": boolean
+    file: boolean
+    snapshot: boolean
+  }>({
+    text: true,
+    tool: true,
+    "tool-invocation": true,
+    "step-start": true,
+    "step-finish": true,
+    file: true,
+    snapshot: true
+  })
 
-  // Update logo when theme changes and handle screen size
+  // Update logo when theme changes
   useEffect(() => {
     const updateLogo = () => {
       const settings = settingsService.getSettings()
@@ -38,23 +67,16 @@ function App() {
       setLogoSrc(isLightTheme ? "/logo_black.svg" : "/logo_white.svg")
     }
     
-    const handleResize = () => {
-      setIsNarrowScreen(window.innerWidth < 768)
-    }
-    
     updateLogo()
-    handleResize()
     
-    // Listen for theme changes and window resize
+    // Listen for theme changes
     const handleStorageChange = () => {
       updateLogo()
     }
     
     window.addEventListener('storage', handleStorageChange)
-    window.addEventListener('resize', handleResize)
     return () => {
       window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('resize', handleResize)
     }
   }, [])
 
@@ -69,9 +91,25 @@ function App() {
     )
   }
 
+  // Initialize servers
+  useEffect(() => {
+    const loadedServers = serversService.getServers()
+    const currentServerData = serversService.getCurrentServer()
+    setServers(loadedServers)
+    setCurrentServer(currentServerData)
+    
+    // Update opencode service with current server URL
+    if (currentServerData) {
+      const serverUrl = serversService.getServerUrl(currentServerData)
+      openCodeService.updateServerUrl(serverUrl)
+    }
+  }, [])
+
   // Initialize connection and load data
   useEffect(() => {
     const initializeApp = async () => {
+      if (!currentServer) return
+      
       const connected = await openCodeService.testConnection()
       setIsConnected(connected)
 
@@ -166,7 +204,7 @@ function App() {
         cleanup.then((unsubscribe) => unsubscribe?.())
       }
     }
-  }, [])
+  }, [currentServer])
 
   const handleSessionChange = async (sessionId: string) => {
     const session = sessions.find((s) => s.id === sessionId)
@@ -184,6 +222,103 @@ function App() {
     if (provider && provider.models.length > 0) {
       setSelectedModel(provider.models[0].id)
     }
+  }
+
+  const handleServerChange = async (serverId: string) => {
+    const server = servers.find(s => s.id === serverId)
+    if (server) {
+      setCurrentServer(server)
+      serversService.setCurrentServer(serverId)
+      
+      // Update opencode service with new server URL
+      const serverUrl = serversService.getServerUrl(server)
+      openCodeService.updateServerUrl(serverUrl)
+      
+      // Reconnect and reload data
+      const connected = await openCodeService.testConnection()
+      setIsConnected(connected)
+      
+      if (connected) {
+        // Reload all data for new server
+        const { providers: providersData, defaults } = await openCodeService.getProviders()
+        setProviders(providersData)
+        
+        const modesData = await openCodeService.getModes()
+        setModes(modesData)
+        if (modesData.length > 0) {
+          setSelectedMode(modesData[0].name)
+        }
+        
+        if (providersData.length > 0) {
+          let defaultProvider = providersData.find((p) => p.id === "anthropic") || providersData[0]
+          let defaultModel = defaultProvider.models[0]
+          
+          if (defaults[defaultProvider.id]) {
+            const configuredModel = defaultProvider.models.find((m) => m.id === defaults[defaultProvider.id])
+            if (configuredModel) {
+              defaultModel = configuredModel
+            }
+          }
+          
+          setSelectedProvider(defaultProvider.id)
+          setSelectedModel(defaultModel.id)
+        }
+        
+        const sessionsData = await openCodeService.getSessions()
+        setSessions(sessionsData)
+        
+        if (sessionsData.length > 0) {
+          setCurrentSession(sessionsData[0])
+          const sessionMessages = await openCodeService.getMessages(sessionsData[0].id)
+          setMessages(sessionMessages)
+        } else {
+          const session = await openCodeService.createSession()
+          if (session) {
+            setCurrentSession(session)
+            setSessions([session])
+            setMessages([])
+          }
+        }
+      }
+    }
+  }
+
+  const handleManageServers = () => {
+    setIsServerManagerOpen(true)
+  }
+
+  const handleServerManagerClose = () => {
+    setIsServerManagerOpen(false)
+    // Reload servers in case they were modified
+    const loadedServers = serversService.getServers()
+    const currentServerData = serversService.getCurrentServer()
+    setServers(loadedServers)
+    setCurrentServer(currentServerData)
+  }
+
+  const handleRefreshSessions = async () => {
+    if (isConnected) {
+      const sessionsData = await openCodeService.getSessions()
+      setSessions(sessionsData)
+    }
+  }
+
+  const handleAddServer = (serverData: Omit<OpenCodeServer, "id">) => {
+    const newServer = serversService.addServer(serverData)
+    setServers(serversService.getServers())
+    return newServer
+  }
+
+  const handleUpdateServer = (serverId: string, updates: Partial<Omit<OpenCodeServer, "id">>) => {
+    serversService.updateServer(serverId, updates)
+    setServers(serversService.getServers())
+    setCurrentServer(serversService.getCurrentServer())
+  }
+
+  const handleDeleteServer = (serverId: string) => {
+    serversService.deleteServer(serverId)
+    setServers(serversService.getServers())
+    setCurrentServer(serversService.getCurrentServer())
   }
 
   const handleSend = async () => {
@@ -309,41 +444,22 @@ function App() {
     initializeApp()
   }
 
-  const selectedProviderObj = providers.find((p) => p.id === selectedProvider)
 
-  // Create combined dropdown options for narrow screens
-  const getCombinedOptions = () => {
-    const options: { value: string; label: string }[] = []
-    
-    modes.forEach(mode => {
-      providers.forEach(provider => {
-        provider.models.forEach(model => {
-          const value = `${mode.name}|${provider.id}|${model.id}`
-          const label = `${mode.name.charAt(0).toUpperCase() + mode.name.slice(1)} • ${provider.name} • ${model.name.length > 10 ? model.name.substring(0, 10) + "..." : model.name}`
-          options.push({ value, label })
-        })
-      })
-    })
-    
-    return options
-  }
-
-  const handleCombinedChange = (value: string) => {
-    const [mode, providerId, modelId] = value.split('|')
-    setSelectedMode(mode)
-    setSelectedProvider(providerId)
-    setSelectedModel(modelId)
-  }
-
-  const getCurrentCombinedValue = () => {
-    return `${selectedMode}|${selectedProvider}|${selectedModel}`
-  }
 
   return (
     <div className="terminal-window">
       <div className="terminal-header">
-        <div className="terminal-title"><Logo /></div>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <button className="sidebar-toggle" onClick={() => setIsSidebarOpen(true)} title="Open Sidebar">
+            <Menu size={16} />
+          </button>
+          <div className="terminal-title"><Logo /></div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <MessageFilter
+            filters={messageFilters}
+            onFiltersChange={setMessageFilters}
+          />
           <button className="settings-button-header" onClick={() => setIsSettingsOpen(true)} title="Settings">
             <Wrench size={16} />
           </button>
@@ -359,21 +475,35 @@ function App() {
                 <span className="text-muted">welcome</span>
               </div>
               <div className="message-content">
-                <ReactMarkdown>
-                  Hi. What are we building today?
-                </ReactMarkdown>
+                <MessagePart 
+                  part={{
+                    id: "welcome",
+                    type: "text",
+                    text: "Hi. What are we building today?"
+                  }}
+                />
               </div>
             </div>
           )}
 
-          {messages.map((message) => (
+          {messages
+            .filter(message => {
+              const activeFilters = Object.entries(messageFilters).filter(([_, active]) => active).map(([type, _]) => type)
+              if (activeFilters.length === 0) return false // Hide all if no filters active
+              return message.parts.some(part => activeFilters.includes(part.type))
+            })
+            .map((message) => (
             <div key={message.id} className={`message ${message.role}`}>
               <div className="message-header">
                 <span className={`message-role ${message.role}`}>{message.role}</span>
                 <span className="text-muted">{message.timestamp.toLocaleTimeString()}</span>
               </div>
               <div className="message-content">
-                <ReactMarkdown>{message.content}</ReactMarkdown>
+                {message.parts
+                  .filter(part => messageFilters[part.type as keyof typeof messageFilters])
+                  .map((part) => (
+                    <MessagePart key={part.id} part={part} />
+                  ))}
               </div>
             </div>
           ))}
@@ -414,80 +544,52 @@ function App() {
             <div className={`status-indicator ${isConnected ? "connected" : "disconnected"}`}></div>
             <span>{isConnected ? "Connected" : "Disconnected"}</span>
           </div>
-          <div className="status-item">
-            <span>Session:</span>
-            <Dropdown
-              options={sessions.map((session) => ({
-                value: session.id,
-                label: `${session.title.length > 20 ? session.title.substring(0, 20) + "..." : session.title} (${session.id.slice(-6)})`,
-              }))}
-              value={currentSession?.id || ""}
-              onChange={handleSessionChange}
-              maxWidth="180px"
-            />
-            <button className="new-session-btn" onClick={createNewSession}>
-              +
-            </button>
-          </div>
         </div>
         <div className="status-right">
-          {isNarrowScreen ? (
-            <div className="status-item">
-              <span>Config:</span>
-              <Dropdown
-                options={getCombinedOptions()}
-                value={getCurrentCombinedValue()}
-                onChange={handleCombinedChange}
-                maxWidth="200px"
-              />
-            </div>
-          ) : (
-            <>
-              <div className="status-item">
-                <span>Mode:</span>
-                <Dropdown
-                  options={modes.map((mode) => ({
-                    value: mode.name,
-                    label: mode.name.charAt(0).toUpperCase() + mode.name.slice(1),
-                  }))}
-                  value={selectedMode}
-                  onChange={setSelectedMode}
-                  maxWidth="80px"
-                />
-              </div>
-              <div className="status-item">
-                <span>Provider:</span>
-                <Dropdown
-                  options={providers.map((provider) => ({
-                    value: provider.id,
-                    label: provider.name,
-                  }))}
-                  value={selectedProvider}
-                  onChange={handleProviderChange}
-                  maxWidth="100px"
-                />
-              </div>
-              <div className="status-item">
-                <span>Model:</span>
-                <Dropdown
-                  options={
-                    selectedProviderObj?.models.map((model) => ({
-                      value: model.id,
-                      label: model.name.length > 15 ? model.name.substring(0, 15) + "..." : model.name,
-                    })) || []
-                  }
-                  value={selectedModel}
-                  onChange={setSelectedModel}
-                  maxWidth="120px"
-                />
-              </div>
-            </>
-          )}
+          <div className="status-item">
+            <CyclingButton
+              options={modes.map((mode) => ({
+                value: mode.name,
+                label: mode.name.charAt(0).toUpperCase() + mode.name.slice(1),
+              }))}
+              value={selectedMode}
+              onChange={setSelectedMode}
+            />
+          </div>
           <div className="status-item">
             <span>v0.1.0</span>
           </div>
         </div>
       </div>
+
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        sessions={sessions}
+        currentSession={currentSession}
+        onSessionChange={handleSessionChange}
+        onNewSession={createNewSession}
+        onRefreshSessions={handleRefreshSessions}
+        providers={providers}
+        selectedProvider={selectedProvider}
+        selectedModel={selectedModel}
+        onProviderChange={handleProviderChange}
+        onModelChange={setSelectedModel}
+        servers={servers}
+        currentServer={currentServer}
+        onServerChange={handleServerChange}
+        onManageServers={handleManageServers}
+      />
+
+      <ServerManager
+        isOpen={isServerManagerOpen}
+        onClose={handleServerManagerClose}
+        servers={servers}
+        currentServer={currentServer}
+        onAddServer={handleAddServer}
+        onUpdateServer={handleUpdateServer}
+        onDeleteServer={handleDeleteServer}
+      />
 
       <Settings
         isOpen={isSettingsOpen}

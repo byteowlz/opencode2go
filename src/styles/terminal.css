@@ -1595,3 +1595,155 @@ body {
   font-weight: bold;
   color: inherit;
 }
+
+/* Compact Markdown Styles - Dense terminal-style rendering */
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4,
+.message-content h5,
+.message-content h6 {
+  margin: var(--space-2) 0 var(--space-1) 0;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-weight: bold;
+  line-height: 1.2;
+}
+
+.message-content h1 { font-size: var(--font-size-lg); }
+.message-content h2 { font-size: var(--font-size-base); }
+.message-content h3 { font-size: var(--font-size-sm); }
+.message-content h4,
+.message-content h5,
+.message-content h6 { font-size: var(--font-size-sm); }
+
+.message-content p {
+  margin: var(--space-1) 0;
+  line-height: 1.4;
+}
+
+.message-content ul,
+.message-content ol {
+  margin: var(--space-1) 0;
+  padding-left: var(--space-4);
+}
+
+.message-content li {
+  margin: 0;
+  padding: 0;
+  line-height: 1.3;
+}
+
+.message-content li + li {
+  margin-top: 0;
+}
+
+.message-content ul ul,
+.message-content ol ol,
+.message-content ul ol,
+.message-content ol ul {
+  margin: 0;
+  padding-left: var(--space-3);
+}
+
+.message-content blockquote {
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--color-border-active);
+  background-color: var(--color-bg-element);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.message-content pre {
+  margin: var(--space-2) 0;
+  padding: var(--space-3);
+  background-color: var(--color-bg-element);
+  border: 1px solid var(--color-border);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.3;
+}
+
+.message-content code {
+  padding: 2px 4px;
+  background-color: var(--color-bg-element);
+  border: 1px solid var(--color-border-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.message-content pre code {
+  padding: 0;
+  background: none;
+  border: none;
+}
+
+.message-content table {
+  margin: var(--space-2) 0;
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--font-size-sm);
+}
+
+.message-content th,
+.message-content td {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.message-content th {
+  background-color: var(--color-bg-element);
+  font-weight: bold;
+}
+
+.message-content hr {
+  margin: var(--space-3) 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.message-content a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.message-content a:hover {
+  text-decoration: underline;
+}
+
+/* Remove extra spacing from first and last elements */
+.message-content > *:first-child {
+  margin-top: 0;
+}
+
+.message-content > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Header button styles */
+.sidebar-toggle,
+.filter-toggle,
+.settings-button-header {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  padding: var(--space-2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-toggle:hover,
+.filter-toggle:hover,
+.settings-button-header:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-active);
+  background-color: var(--color-bg-element);
+}
