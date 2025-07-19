@@ -130,6 +130,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
 /* Messages area */
@@ -137,7 +138,10 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: var(--space-4);
-  background-color: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  scroll-behavior: smooth;
 }
 
 .message {
@@ -1746,4 +1750,55 @@ body {
   color: var(--color-text);
   border-color: var(--color-border-active);
   background-color: var(--color-bg-element);
+}
+
+/* Scroll to bottom button */
+.scroll-to-bottom-button {
+  position: absolute;
+  bottom: 80px;
+  right: var(--space-4);
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-panel);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  z-index: 100;
+}
+
+.scroll-to-bottom-button:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-active);
+  background-color: var(--color-bg-element);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.scroll-to-bottom-button:active {
+  transform: translateY(0);
+}
+
+/* Responsive scroll button positioning */
+@media (max-width: 768px) {
+  .scroll-to-bottom-button {
+    bottom: 100px;
+    right: var(--space-3);
+    width: 36px;
+    height: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .scroll-to-bottom-button {
+    bottom: 120px;
+    right: var(--space-2);
+    width: 32px;
+    height: 32px;
+  }
 }

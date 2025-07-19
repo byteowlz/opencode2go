@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import "./styles/terminal.css"
 import { openCodeService, OpenCodeMessage, OpenCodeSession, OpenCodeProvider, OpenCodeMode } from "./services/opencode"
 import { Settings } from "./components/Settings"
@@ -9,7 +9,7 @@ import { MessageFilter } from "./components/MessageFilter"
 import { CyclingButton } from "./components/CyclingButton"
 import { AppSettings } from "./types/settings"
 import { OpenCodeServer } from "./types/servers"
-import { Wrench, Menu } from "lucide-react"
+import { Wrench, Menu, ChevronDown } from "lucide-react"
 import { settingsService } from "./services/settings"
 import { serversService } from "./services/servers"
 import { getTheme } from "./themes"
@@ -18,6 +18,11 @@ function App() {
   const [input, setInput] = useState("")
   const [isConnected, setIsConnected] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Ref for auto-scrolling to bottom
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const [showScrollButton, setShowScrollButton] = useState(false)
   const [currentSession, setCurrentSession] = useState<OpenCodeSession | null>(null)
   const [sessions, setSessions] = useState<OpenCodeSession[]>([])
   const [providers, setProviders] = useState<OpenCodeProvider[]>([])
@@ -26,14 +31,14 @@ function App() {
   const [selectedMode, setSelectedMode] = useState<string>("build")
   const [modes, setModes] = useState<OpenCodeMode[]>([])
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [logoSrc, setLogoSrc] = useState("/logo_white.svg")
-  
+  const [logoSrc, setLogoSrc] = useState("/logo_new_transparent.svg")
+
   // New state for sidebar and server management
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isServerManagerOpen, setIsServerManagerOpen] = useState(false)
   const [servers, setServers] = useState<OpenCodeServer[]>([])
   const [currentServer, setCurrentServer] = useState<OpenCodeServer | null>(null)
-  
+
   // Message filter state
   const [messageFilters, setMessageFilters] = useState<{
     text: boolean
@@ -53,27 +58,75 @@ function App() {
     snapshot: true
   })
 
+  // Auto-scroll to bottom when messages change
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  // Check if user is at bottom
+  const isAtBottom = () => {
+    if (!messagesContainerRef.current) return true
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current
+    return scrollHeight - scrollTop <= clientHeight + 50 // 50px threshold
+  }
+
+  // Check if user has scrolled up from bottom
+  const handleScroll = () => {
+    if (messagesContainerRef.current) {
+      const atBottom = isAtBottom()
+      setShowScrollButton(!atBottom && messages.length > 0)
+    }
+  }
+
+  // Smart auto-scroll: only scroll if user is already at bottom
+  useEffect(() => {
+    // Small delay to ensure DOM has updated
+    const timer = setTimeout(() => {
+      if (isAtBottom()) {
+        scrollToBottom()
+      }
+    }, 10)
+    return () => clearTimeout(timer)
+  }, [messages])
+
+  // Always scroll when loading starts/stops
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(scrollToBottom, 10)
+      return () => clearTimeout(timer)
+    }
+  }, [isLoading])
+
+  // Add scroll listener
+  useEffect(() => {
+    const container = messagesContainerRef.current
+    if (container) {
+      container.addEventListener('scroll', handleScroll)
+      return () => container.removeEventListener('scroll', handleScroll)
+    }
+  }, [])
+
   // Update logo when theme changes
   useEffect(() => {
     const updateLogo = () => {
       const settings = settingsService.getSettings()
       const theme = getTheme(settings.appearance.theme)
-      
+
       // Simple heuristic: if background is lighter than text, it's a light theme
       const bgBrightness = parseInt(theme.colors.background.slice(1), 16)
       const textBrightness = parseInt(theme.colors.text.slice(1), 16)
       const isLightTheme = bgBrightness > textBrightness
-      
-      setLogoSrc(isLightTheme ? "/logo_black.svg" : "/logo_white.svg")
+
+      setLogoSrc(isLightTheme ? "/logo_new_transparent.svg" : "/logo_new_transparent.svg")
     }
-    
+
     updateLogo()
-    
+
     // Listen for theme changes
     const handleStorageChange = () => {
       updateLogo()
     }
-    
+
     window.addEventListener('storage', handleStorageChange)
     return () => {
       window.removeEventListener('storage', handleStorageChange)
@@ -83,10 +136,10 @@ function App() {
   // Logo component that switches based on theme
   const Logo = () => {
     return (
-      <img 
-        src={logoSrc} 
-        alt="opencode2go" 
-        style={{ height: "20px", width: "auto" }}
+      <img
+        src={logoSrc}
+        alt="opencode2go"
+        style={{ height: "30px", width: "auto" }}
       />
     )
   }
@@ -97,7 +150,7 @@ function App() {
     const currentServerData = serversService.getCurrentServer()
     setServers(loadedServers)
     setCurrentServer(currentServerData)
-    
+
     // Update opencode service with current server URL
     if (currentServerData) {
       const serverUrl = serversService.getServerUrl(currentServerData)
@@ -109,7 +162,7 @@ function App() {
   useEffect(() => {
     const initializeApp = async () => {
       if (!currentServer) return
-      
+
       const connected = await openCodeService.testConnection()
       setIsConnected(connected)
 
@@ -229,44 +282,44 @@ function App() {
     if (server) {
       setCurrentServer(server)
       serversService.setCurrentServer(serverId)
-      
+
       // Update opencode service with new server URL
       const serverUrl = serversService.getServerUrl(server)
       openCodeService.updateServerUrl(serverUrl)
-      
+
       // Reconnect and reload data
       const connected = await openCodeService.testConnection()
       setIsConnected(connected)
-      
+
       if (connected) {
         // Reload all data for new server
         const { providers: providersData, defaults } = await openCodeService.getProviders()
         setProviders(providersData)
-        
+
         const modesData = await openCodeService.getModes()
         setModes(modesData)
         if (modesData.length > 0) {
           setSelectedMode(modesData[0].name)
         }
-        
+
         if (providersData.length > 0) {
           let defaultProvider = providersData.find((p) => p.id === "anthropic") || providersData[0]
           let defaultModel = defaultProvider.models[0]
-          
+
           if (defaults[defaultProvider.id]) {
             const configuredModel = defaultProvider.models.find((m) => m.id === defaults[defaultProvider.id])
             if (configuredModel) {
               defaultModel = configuredModel
             }
           }
-          
+
           setSelectedProvider(defaultProvider.id)
           setSelectedModel(defaultModel.id)
         }
-        
+
         const sessionsData = await openCodeService.getSessions()
         setSessions(sessionsData)
-        
+
         if (sessionsData.length > 0) {
           setCurrentSession(sessionsData[0])
           const sessionMessages = await openCodeService.getMessages(sessionsData[0].id)
@@ -467,7 +520,7 @@ function App() {
       </div>
 
       <div className="terminal-content">
-        <div className="messages-container">
+        <div className="messages-container" ref={messagesContainerRef}>
           {messages.length === 0 && (
             <div className="message">
               <div className="message-header">
@@ -475,7 +528,7 @@ function App() {
                 <span className="text-muted">welcome</span>
               </div>
               <div className="message-content">
-                <MessagePart 
+                <MessagePart
                   part={{
                     id: "welcome",
                     type: "text",
@@ -493,20 +546,20 @@ function App() {
               return message.parts.some(part => activeFilters.includes(part.type))
             })
             .map((message) => (
-            <div key={message.id} className={`message ${message.role}`}>
-              <div className="message-header">
-                <span className={`message-role ${message.role}`}>{message.role}</span>
-                <span className="text-muted">{message.timestamp.toLocaleTimeString()}</span>
+              <div key={message.id} className={`message ${message.role}`}>
+                <div className="message-header">
+                  <span className={`message-role ${message.role}`}>{message.role}</span>
+                  <span className="text-muted">{message.timestamp.toLocaleTimeString()}</span>
+                </div>
+                <div className="message-content">
+                  {message.parts
+                    .filter(part => messageFilters[part.type as keyof typeof messageFilters])
+                    .map((part) => (
+                      <MessagePart key={part.id} part={part} />
+                    ))}
+                </div>
               </div>
-              <div className="message-content">
-                {message.parts
-                  .filter(part => messageFilters[part.type as keyof typeof messageFilters])
-                  .map((part) => (
-                    <MessagePart key={part.id} part={part} />
-                  ))}
-              </div>
-            </div>
-          ))}
+            ))}
 
           {isLoading && (
             <div className="message assistant">
@@ -519,7 +572,21 @@ function App() {
               </div>
             </div>
           )}
+          
+          {/* Auto-scroll anchor */}
+          <div ref={messagesEndRef} />
         </div>
+
+        {/* Scroll to bottom button */}
+        {showScrollButton && (
+          <button 
+            className="scroll-to-bottom-button" 
+            onClick={scrollToBottom}
+            title="Scroll to bottom"
+          >
+            <ChevronDown size={16} />
+          </button>
+        )}
 
         <div className="input-container">
           <div className="input-wrapper">
