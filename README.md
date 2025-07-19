@@ -2,18 +2,18 @@
 
 ![opencode2go_Logo](logo.svg)
 
-A GUI client for [opencode](https://opencode.ai) built with Tauri, React, and TypeScript. This app provides a terminal-style interface for interacting with AI coding assistants through the opencode server.
+A GUI client for the awesome [opencode](https://opencode.ai) terminal agent, built with Tauri. This app provides a terminal-style gui client for interacting with opencode running as a server. Runs on Mac, Linux, Windows, iOS and Android (currently only tested on Mac and iOS)
 
-## ⚠️ Security Disclaimer
+## Disclaimer
 
 **This application does not include any authentication or security features.** When using opencode2go:
 
-- **Never expose your opencode server ports publicly** to the internet
-- Use secure networking solutions like **VPN** or **Tailscale** to access your opencode server remotely
+- **Don't expose your opencode server ports publicly** to the internet without some auth layer in between
+- Use secure networking solutions like **VPN** or **Tailscale/Headscael** to access your opencode server remotely
 - Only connect to opencode servers on trusted networks (localhost, private networks, or secure tunnels)
 - Be aware that all communication with the opencode server is unencrypted HTTP by default
 
-**For remote access, we strongly recommend using Tailscale or a VPN instead of exposing ports directly.**
+**For remote access, I can recommend using Tailscale or Wireguard.**
 
 ## Features
 
@@ -31,27 +31,20 @@ A GUI client for [opencode](https://opencode.ai) built with Tauri, React, and Ty
 
 **Version**: 0.1.0 (Early Development)
 
-### Implemented Features
+### Features
 
 - Chat interface with message history and filtering
 - Connection to opencode server via HTTP API
 - Provider and model selection with nested dropdowns
 - Session creation, switching, and management
-- Multiple server configurations with easy switching
-- Settings panel with server and appearance configuration
-- Theme switching with live preview (Dracula, GitHub, VS Code, etc.)
+- Multiple server configurations with easy switching (one server exposes one specific folder/repo)
+- Theme switching using the same themes as opencode (Dracula, GitHub, VS Code, etc.)
 - Font customization with multiple monospace fonts
 - Real-time session updates via Server-Sent Events
 - Tauri-based HTTP client for CORS-free server communication
-- iOS app with safe area support for modern devices
+- iOS app support
 - Message part filtering (text, tools, files, snapshots, etc.)
 - Responsive design for mobile and desktop
-
-### In Progress
-
-- Enhanced tool output rendering
-- Better error handling and connection status
-- Performance optimizations for large chat histories
 
 ## Prerequisites
 
@@ -97,16 +90,19 @@ bun tauri build
 1. **Setup iOS development environment**:
    - Install Xcode from the App Store
    - Install iOS development tools:
+
      ```bash
      cargo install tauri-cli --version "^2.0.0"
      ```
 
 2. **Initialize iOS project** (first time only):
+
    ```bash
    bun tauri ios init
    ```
 
 3. **Build and run on iOS**:
+
    ```bash
    # Development on iOS simulator
    bun tauri ios dev
@@ -158,12 +154,6 @@ For secure remote access to your opencode server:
    - Ensure both devices are on the same WiFi network
    - Use the server's local IP (e.g., `http://192.168.1.100:4096`)
 
-### ⚠️ What NOT to do
-
-- **Never** expose opencode ports directly to the internet
-- **Never** use port forwarding to make opencode publicly accessible
-- **Never** disable your firewall for opencode ports
-
 ## Architecture
 
 - **Frontend**: React 18 + TypeScript + Vite
@@ -191,13 +181,9 @@ opencode2go/
 └── public/                # Static assets
 ```
 
-## Recommended IDE Setup
-
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
-
 ## Contributing
 
-This is an early-stage project. Contributions are welcome! Please:
+This is an early-stage project. Contributions are welcome!
 
 1. Fork the repository
 2. Create a feature branch
@@ -207,4 +193,4 @@ This is an early-stage project. Contributions are welcome! Please:
 
 ## License
 
-[Add your license here]
+MIT License
