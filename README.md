@@ -71,13 +71,13 @@ A GUI client for [opencode](https://opencode.ai) built with Tauri, React, and Ty
 2. **Start development server**:
 
    ```bash
-   bun dev
+   bun tauri dev
    ```
 
 3. **Build for production**:
 
    ```bash
-   bun run build
+   bun tauri build
    ```
 
 ## Platform-Specific Builds
@@ -86,11 +86,10 @@ A GUI client for [opencode](https://opencode.ai) built with Tauri, React, and Ty
 
 ```bash
 # Development
-bun dev
+bun tauri dev
 
 # Production build
-cd src-tauri
-cargo tauri build
+bun tauri build
 ```
 
 ### iOS
@@ -104,21 +103,19 @@ cargo tauri build
 
 2. **Initialize iOS project** (first time only):
    ```bash
-   cd src-tauri
-   cargo tauri ios init
+   bun tauri ios init
    ```
 
 3. **Build and run on iOS**:
    ```bash
-   # Build the frontend first
-   bun run build
+   # Development on iOS simulator
+   bun tauri ios dev
    
-   # Build for iOS using the iOS-specific config
-   cd src-tauri
-   cargo tauri ios build --config tauri.ios.conf.json
+   # Development on physical iOS device
+   bun tauri ios dev --host
    
-   # Or run directly on device/simulator
-   cargo tauri ios dev --config tauri.ios.conf.json
+   # Production build for iOS
+   bun tauri ios build
    ```
 
 4. **Deploy to device**:
