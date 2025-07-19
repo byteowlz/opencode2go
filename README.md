@@ -9,7 +9,7 @@ A GUI client for the awesome [opencode](https://opencode.ai) terminal agent, bui
 **This application does not include any authentication or security features.** When using opencode2go:
 
 - **Don't expose your opencode server ports publicly** to the internet without some auth layer in between
-- Use secure networking solutions like **VPN** or **Tailscale/Headscael** to access your opencode server remotely
+- Use secure networking solutions like **VPN** or **Tailscale/Headscale** to access your opencode server remotely
 - Only connect to opencode servers on trusted networks (localhost, private networks, or secure tunnels)
 - Be aware that all communication with the opencode server is unencrypted HTTP by default
 
