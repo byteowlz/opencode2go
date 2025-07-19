@@ -18,7 +18,7 @@ function App() {
   const [input, setInput] = useState("")
   const [isConnected, setIsConnected] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  
+
   // Ref for auto-scrolling to bottom
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -572,15 +572,15 @@ function App() {
               </div>
             </div>
           )}
-          
+
           {/* Auto-scroll anchor */}
           <div ref={messagesEndRef} />
         </div>
 
         {/* Scroll to bottom button */}
         {showScrollButton && (
-          <button 
-            className="scroll-to-bottom-button" 
+          <button
+            className="scroll-to-bottom-button"
             onClick={scrollToBottom}
             title="Scroll to bottom"
           >
@@ -595,7 +595,7 @@ function App() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
+              placeholder="Type your message..."
               rows={1}
             />
             <button className="send-button" onClick={handleSend} disabled={!input.trim() || isLoading}>

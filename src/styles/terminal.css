@@ -76,6 +76,14 @@ body {
   font-size: var(--font-size-sm);
 }
 
+/* iOS specific header adjustments */
+@supports (padding: max(0px)) {
+  .terminal-header {
+    /* Add extra padding on top for dynamic island */
+    padding-top: max(var(--space-2), env(safe-area-inset-top));
+  }
+}
+
 .terminal-title {
   color: var(--color-text);
   font-weight: bold;
@@ -993,6 +1001,14 @@ body {
   padding: var(--space-4);
 }
 
+/* iOS specific input area adjustments */
+@supports (padding: max(0px)) {
+  .input-container {
+    /* Add extra padding on bottom for home indicator */
+    padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  }
+}
+
 .input-wrapper {
   display: flex;
   gap: var(--space-2);
@@ -1058,6 +1074,14 @@ body {
   border-top: 1px solid var(--color-border);
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+}
+
+/* iOS specific status bar adjustments */
+@supports (padding: max(0px)) {
+  .status-bar {
+    /* Add extra padding on bottom for home indicator */
+    padding-bottom: max(var(--space-2), env(safe-area-inset-bottom));
+  }
 }
 
 .status-left,

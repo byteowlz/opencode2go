@@ -11,7 +11,7 @@
 .sidebar {
   position: fixed;
   top: 0;
-  left: -320px;
+  left: -100%;
   width: 320px;
   height: 100vh;
   background-color: var(--color-bg-panel);
@@ -20,10 +20,35 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: left 0.3s ease;
+  transform: translateZ(0); /* Force hardware acceleration */
+}
+
+/* iOS safe area support for sidebar */
+@supports (padding: max(0px)) {
+  .sidebar {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    height: 100vh;
+  }
+}
+
+/* iOS specific fixes */
+@media (max-width: 768px) {
+  .sidebar {
+    -webkit-transform: translateX(0);
+    transform: translateX(0);
+    will-change: transform, left;
+  }
+  
+  .sidebar-open {
+    -webkit-transform: translateX(0);
+    transform: translateX(0);
+  }
 }
 
 .sidebar-open {
-  left: 0;
+  left: 0 !important;
 }
 
 .sidebar-header {
@@ -296,7 +321,7 @@
 @media (max-width: 768px) {
   .sidebar {
     width: 280px;
-    left: -280px;
+    left: -100%;
   }
   
   .sidebar-content {
@@ -311,7 +336,7 @@
 @media (max-width: 480px) {
   .sidebar {
     width: 100vw;
-    left: -100vw;
+    left: -100%;
   }
   
   .sidebar-header {
