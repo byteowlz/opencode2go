@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "opencode2go",
   "version": "0.1.0",
-  "identifier": "com.opencode2go.app",
+  "identifier": "com.opencode2go.mobile",
   "build": {
     "beforeBuildCommand": "bun run build",
     "frontendDist": "../dist"
@@ -42,7 +42,7 @@
       "icons/icon.png"
     ],
     "iOS": {
-      "developmentTeam": "L2BG764C4L"
+      "developmentTeam": "K8RV7BFSRS"
     }
   }
 }

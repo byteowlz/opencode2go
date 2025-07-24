@@ -1,0 +1,74 @@
+$ tauri ios build
+        Warn The bundle identifier "com.opencode2go.app" set in `tauri.ios.conf.json identifier` ends with `.app`. This is not recommended because it conflicts with the application bundle extension on macOS.
+     Running beforeBuildCommand `bun run build`
+$ tsc && vite build
+vite v6.3.5 building for production...
+transforming...
+✓ 3022 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                     0.54 kB │ gzip:   0.33 kB
+dist/assets/index-Dna3r5vu.css     45.74 kB │ gzip:   6.43 kB
+dist/assets/index-CPtnfZZx.js   1,045.33 kB │ gzip: 350.48 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 1.42s
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -allowProvisioningUpdates -scheme opencode2go_iOS -workspace /Users/tommyfalkowski/byteowlz/opencode2go/src-tauri/gen/apple/opencode2go.xcodeproj/project.xcworkspace/ -sdk iphoneos -configuration release build
+
+User defaults from command line:
+    IDEPackageSupportUseBuiltinSCM = YES
+
+Build settings from command line:
+    SDKROOT = iphoneos18.2
+
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS, id:dvtdevice-DVTiPhonePlaceholder-iphoneos:placeholder, name:Any iOS Device }
+{ platform:macOS, arch:arm64, variant:Designed for [iPad,iPhone], id:00006041-000430992207001C, name:My Mac }
+{ platform:iOS Simulator, id:dvtdevice-DVTiOSDeviceSimulatorPlaceholder-iphonesimulator:placeholder, name:Any iOS Simulator Device }
+{ platform:iOS, arch:arm64, id:00008130-0005052134D1001C, name:Tommy’s iPhone }
+Prepare packages
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (1 target)
+    Target 'opencode2go_iOS' in project 'opencode2go' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.2.sdk -x objective-c++ -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.2.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/ibtool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/tommyfalkowski/byteowlz/opencode2go/src-tauri/gen/apple/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.2.sdk -x c -c /dev/null
+
+Build description signature: 3ef3295b367dc745b92014b7853a0346
+Build description path: /Users/tommyfalkowski/Library/Developer/Xcode/DerivedData/opencode2go-avktimgpuvsrwhdblpgyfuzfciop/Build/Intermediates.noindex/XCBuildData/3ef3295b367dc745b92014b7853a0346.xcbuilddata
+error: Multiple commands produce '/Users/tommyfalkowski/Library/Developer/Xcode/DerivedData/opencode2go-avktimgpuvsrwhdblpgyfuzfciop/Build/Products/release-iphoneos/opencode2go.app/libapp.a'
+    note: Target 'opencode2go_iOS' (project 'opencode2go') has copy command from '/Users/tommyfalkowski/byteowlz/opencode2go/src-tauri/gen/apple/Externals/arm64/debug/libapp.a' to '/Users/tommyfalkowski/Library/Developer/Xcode/DerivedData/opencode2go-avktimgpuvsrwhdblpgyfuzfciop/Build/Products/release-iphoneos/opencode2go.app/libapp.a'
+    note: Target 'opencode2go_iOS' (project 'opencode2go') has copy command from '/Users/tommyfalkowski/byteowlz/opencode2go/src-tauri/gen/apple/Externals/arm64/release/libapp.a' to '/Users/tommyfalkowski/Library/Developer/Xcode/DerivedData/opencode2go-avktimgpuvsrwhdblpgyfuzfciop/Build/Products/release-iphoneos/opencode2go.app/libapp.a'
+note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'opencode2go_iOS' from project 'opencode2go')
+note: Run script build phase 'Build Rust Code' will be run during every build because the option to run the script phase "Based on dependency analysis" is unchecked. (in target 'opencode2go_iOS' from project 'opencode2go')
+warning: duplicate output file '/Users/tommyfalkowski/Library/Developer/Xcode/DerivedData/opencode2go-avktimgpuvsrwhdblpgyfuzfciop/Build/Products/release-iphoneos/opencode2go.app/libapp.a' on task: CpResource /Users/tommyfalkowski/Library/Developer/Xcode/DerivedData/opencode2go-avktimgpuvsrwhdblpgyfuzfciop/Build/Products/release-iphoneos/opencode2go.app/libapp.a /Users/tommyfalkowski/byteowlz/opencode2go/src-tauri/gen/apple/Externals/arm64/release/libapp.a (in target 'opencode2go_iOS' from project 'opencode2go')
+** BUILD FAILED **
+
+
+The following build commands failed:
+	Building workspace opencode2go with scheme opencode2go_iOS and configuration release
+(1 failure)
+command ["xcodebuild"] exited with code 65
+       Error command ["xcodebuild"] exited with code 65
+error: script "tauri" exited with code 1

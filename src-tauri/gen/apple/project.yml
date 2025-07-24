@@ -1,6 +1,6 @@
 name: opencode2go
 options:
-  bundleIdPrefix: com.opencode2go.app
+  bundleIdPrefix: com.opencode2go.mobile
   deploymentTarget:
     iOS: 13.0
 fileGroups: [../../src]
@@ -11,7 +11,8 @@ settingGroups:
   app:
     base:
       PRODUCT_NAME: opencode2go
-      PRODUCT_BUNDLE_IDENTIFIER: com.opencode2go.app
+      PRODUCT_BUNDLE_IDENTIFIER: com.opencode2go.mobile
+      DEVELOPMENT_TEAM: K8RV7BFSRS
 targetTemplates:
   app:
     type: application
