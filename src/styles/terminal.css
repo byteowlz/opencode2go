@@ -247,7 +247,7 @@ body {
 
 .message-content ul,
 .message-content ol {
-  margin: 1px 0;
+  margin: 1px 0 1px var(--space-4);
   padding-left: var(--space-6);
 }
 
@@ -1081,6 +1081,9 @@ body {
   .status-bar {
     /* Add extra padding on bottom for home indicator */
     padding-bottom: max(var(--space-2), env(safe-area-inset-bottom));
+    /* Add padding for rounded edges on left and right */
+    padding-left: max(var(--space-4), env(safe-area-inset-left));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
   }
 }
 
