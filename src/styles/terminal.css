@@ -81,6 +81,9 @@ body {
   .terminal-header {
     /* Add extra padding on top for dynamic island */
     padding-top: max(var(--space-2), env(safe-area-inset-top));
+    /* Add padding for rounded edges on left and right */
+    padding-left: max(var(--space-4), env(safe-area-inset-left));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
   }
 }
 
@@ -150,6 +153,15 @@ body {
   flex-direction: column;
   gap: var(--space-4);
   scroll-behavior: smooth;
+}
+
+/* iOS specific messages container adjustments */
+@supports (padding: max(0px)) {
+  .messages-container {
+    /* Add padding for rounded edges on left and right */
+    padding-left: max(var(--space-4), env(safe-area-inset-left));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
+  }
 }
 
 .message {
@@ -1006,6 +1018,9 @@ body {
   .input-container {
     /* Add extra padding on bottom for home indicator */
     padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+    /* Add padding for rounded edges on left and right */
+    padding-left: max(var(--space-4), env(safe-area-inset-left));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
   }
 }
 
@@ -1076,16 +1091,7 @@ body {
   color: var(--color-text-muted);
 }
 
-/* iOS specific status bar adjustments */
-@supports (padding: max(0px)) {
-  .status-bar {
-    /* Add extra padding on bottom for home indicator */
-    padding-bottom: max(var(--space-2), env(safe-area-inset-bottom));
-    /* Add padding for rounded edges on left and right */
-    padding-left: max(var(--space-4), env(safe-area-inset-left));
-    padding-right: max(var(--space-4), env(safe-area-inset-right));
-  }
-}
+
 
 .status-left,
 .status-right {
@@ -1106,6 +1112,16 @@ body {
     gap: var(--space-2);
     justify-content: space-between;
   }
+  
+  /* Preserve safe area padding on mobile devices */
+  @supports (padding: max(0px)) {
+    .status-bar {
+      padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+      padding-left: max(var(--space-2), env(safe-area-inset-left));
+      padding-right: max(var(--space-2), env(safe-area-inset-right));
+    }
+  }
+}
   
   .status-left,
   .status-right {
@@ -1149,6 +1165,16 @@ body {
     justify-content: space-between;
     align-items: center;
   }
+  
+  /* Preserve safe area padding on mobile devices */
+  @supports (padding: max(0px)) {
+    .status-bar {
+      padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+      padding-left: max(var(--space-2), env(safe-area-inset-left));
+      padding-right: max(var(--space-2), env(safe-area-inset-right));
+    }
+  }
+}
   
   .status-left,
   .status-right {

@@ -5,6 +5,7 @@
   "identifier": "com.opencode2go.app",
   "build": {
     "beforeDevCommand": "bun run dev",
+    "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "bun run build",
     "frontendDist": "../dist"
   },
