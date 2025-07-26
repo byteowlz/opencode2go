@@ -1,24 +1,28 @@
 #!/bin/bash
 
-# Install iOS app permanently on device
-# Requires Apple Developer membership and connected iPhone
+# /// script
+# requires-bash = ">=5"
+# ///
 
-echo "🚀 Building iOS app for permanent installation..."
+# Load environment variables from .env
+if [ -f .env ]; then
+  export $(grep -v '^#' .env | xargs)
+else
+  echo "❌ .env file not found. Please create one with DEVICE_ID."
+  exit 1
+fi
+
+echo "Building iOS app for permanent installation..."
 
 # Build the release version
-echo "📦 Building release version..."
-bun run tauri ios build
+echo "Building release version..."
+bun tauri ios build --config src-tauri/tauri.ios.conf.json
 
 # Check if build succeeded
 if [ $? -eq 0 ]; then
-    echo "✅ Build completed successfully!"
-    echo "📱 To install on your iPhone:"
-    echo "   1. Open Xcode: open src-tauri/gen/apple/opencode2go.xcodeproj"
-    echo "   2. Select your iPhone from device dropdown"
-    echo "   3. Click the Play button (▶️) to install"
-    echo ""
-    echo "🎉 The app will be permanently installed with your developer certificate!"
+  echo "✅ Build completed successfully!"
+  xcrun devicectl device install app --device "$DEVICE_ID" src-tauri/gen/apple/build/arm64/opencode2go.ipa
 else
-    echo "❌ Build failed. Please check the errors above."
-    exit 1
+  echo "❌ Build failed. Please check the errors above."
+  exit 1
 fi

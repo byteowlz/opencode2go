@@ -28,3 +28,11 @@
 - AVOID `any` type and `let` statements
 - PREFER single word variable names
 - Use Bun APIs like `Bun.file()` over Node.js equivalents
+
+## Building for iOS
+
+- bun tauri ios init --config src-tauri/tauri.ios.conf.json
+- bun tauri ios build --config src-tauri/tauri.ios.conf.json
+- xcrun devicectl device install app --device "$DEVICE_ID" src-tauri/gen/apple/build/arm64/opencode2go.ipa
+(DEVICE_ID is stored in .env file)
+
