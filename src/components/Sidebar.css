@@ -273,6 +273,7 @@
   transition: all 0.2s ease;
   text-align: left;
   width: 100%;
+  color: var(--color-text-muted);
 }
 
 .session-item:hover {
