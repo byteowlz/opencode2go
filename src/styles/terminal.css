@@ -1091,12 +1091,19 @@ body {
   color: var(--color-text-muted);
 }
 
-
+/* iOS specific status bar adjustments */
+@supports (padding: max(0px)) {
+  .status-bar {
+    /* Add padding for rounded edges on left and right - same as input container */
+    padding-left: max(var(--space-4), env(safe-area-inset-left));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
+  }
+}
 
 .status-left,
 .status-right {
   display: flex;
-  gap: var(--space-4);
+  gap: var(--space-2);
 }
 
 .status-item {
@@ -1105,103 +1112,17 @@ body {
   gap: var(--space-1);
 }
 
-/* Responsive status bar for narrow screens */
+/* Mobile status bar - bigger bottom margin */
 @media (max-width: 768px) {
   .status-bar {
-    padding: var(--space-2);
-    gap: var(--space-2);
-    justify-content: space-between;
+    padding-bottom: var(--space-6);
   }
   
-  /* Preserve safe area padding on mobile devices */
+  /* iOS specific mobile adjustments */
   @supports (padding: max(0px)) {
     .status-bar {
-      padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-      padding-left: max(var(--space-2), env(safe-area-inset-left));
-      padding-right: max(var(--space-2), env(safe-area-inset-right));
+      padding-bottom: max(var(--space-6), env(safe-area-inset-bottom));
     }
-  }
-}
-  
-  .status-left,
-  .status-right {
-    gap: var(--space-2);
-  }
-  
-  .status-item {
-    font-size: var(--font-size-xs);
-  }
-  
-  .status-item span {
-    display: none;
-  }
-  
-  .status-item:first-child span {
-    display: inline;
-  }
-  
-  /* Keep status-left flexible but status-right fixed */
-  .status-left {
-    flex: 1;
-    min-width: 0;
-  }
-  
-  .status-right {
-    flex: 0 0 auto;
-    min-width: 0;
-  }
-  
-  /* Mode button should maintain its size */
-  .status-right .cycling-button {
-    min-width: 70px;
-    max-width: 100px;
-  }
-}
-
-@media (max-width: 480px) {
-  .status-bar {
-    flex-direction: row;
-    gap: var(--space-2);
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  /* Preserve safe area padding on mobile devices */
-  @supports (padding: max(0px)) {
-    .status-bar {
-      padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-      padding-left: max(var(--space-2), env(safe-area-inset-left));
-      padding-right: max(var(--space-2), env(safe-area-inset-right));
-    }
-  }
-}
-  
-  .status-left,
-  .status-right {
-    gap: var(--space-2);
-  }
-  
-  .status-left {
-    flex: 1;
-    min-width: 0;
-  }
-  
-  .status-right {
-    flex: 0 0 auto;
-    display: flex;
-    gap: var(--space-2);
-    align-items: center;
-  }
-  
-  /* Mode button maintains proper size on small screens */
-  .status-right .cycling-button {
-    min-width: 80px;
-    max-width: 100px;
-  }
-  
-  /* Version text should be smaller on very small screens */
-  .status-right .status-item:last-child {
-    font-size: 10px;
   }
 }
 
