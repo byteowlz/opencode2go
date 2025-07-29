@@ -1,5 +1,10 @@
 # opencode agent guidelines
 
+## Themes/styling
+
+- Terminal inspired styling (Mono fonts, popular terminal color schemes)
+- No rounded corners
+
 ## Build/Test Commands
 
 - **Install**: `bun install`
@@ -35,4 +40,3 @@
 - bun tauri ios build --config src-tauri/tauri.ios.conf.json
 - xcrun devicectl device install app --device "$DEVICE_ID" src-tauri/gen/apple/build/arm64/opencode2go.ipa
 (DEVICE_ID is stored in .env file)
-

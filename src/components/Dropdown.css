@@ -17,7 +17,7 @@
   font-family: var(--font-mono);
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 0;
+  min-width: 200px;
   max-width: 100%;
 }
 
@@ -160,8 +160,8 @@
 
 /* Nested Dropdown Styles */
 .nested-dropdown-menu {
-  min-width: 280px;
-  max-height: 400px;
+  min-width: 150px;
+  max-height:200px;
   overflow-y: auto;
 }
 
@@ -278,7 +278,7 @@
 /* Mobile responsive improvements for nested dropdown */
 @media (max-width: 768px) {
   .nested-dropdown-menu {
-    min-width: 240px;
+    min-width: 150px;
     max-height: 300px;
   }
   
@@ -300,7 +300,7 @@
 
 @media (max-width: 480px) {
   .nested-dropdown-menu {
-    min-width: 200px;
+    min-width: 150px;
     max-height: 250px;
   }
   

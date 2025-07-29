@@ -20,7 +20,7 @@ export function NestedDropdown({
   value, 
   onChange, 
   placeholder = "Select...", 
-  maxWidth = "200px" 
+  maxWidth = "400px" 
 }: NestedDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [openUpward, setOpenUpward] = useState(false)

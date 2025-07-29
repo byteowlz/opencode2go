@@ -63,7 +63,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSettingsC
       },
     }
     setTempSettings(newTempSettings)
-    
+
     // Apply settings immediately for preview (without saving to localStorage)
     if (field === "theme") {
       const theme = getTheme(value as string, 'dark')
@@ -186,7 +186,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSettingsC
                 }))}
                 value={tempSettings.appearance.theme}
                 onChange={(value) => updateAppearanceSettings("theme", value)}
-                maxWidth="150px"
+                maxWidth="400px"
               />
             </div>
             <div className="settings-group">
