@@ -488,7 +488,7 @@ function App() {
           {messages
             .filter(message => {
               const activeFilters = Object.entries(messageFilters).filter(([_, active]) => active).map(([type, _]) => type)
-              if (activeFilters.length === 0) return false // Hide all if no filters active
+              if (activeFilters.length === 0) return true // Show all if no filters active
               return message.parts.some(part => activeFilters.includes(part.type))
             })
             .map((message) => (

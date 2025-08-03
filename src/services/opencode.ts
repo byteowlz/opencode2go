@@ -294,7 +294,7 @@ class OpenCodeService {
 
         // Create content from text parts for backward compatibility
         const textParts = message.parts.filter((part: any) => part.type === "text")
-        const content = textParts.map((part: any) => part.text).join("\n")
+        const content = textParts.map((part: any) => part.text || "").join("\n")
 
         result.push({
           id: messageInfo.id,

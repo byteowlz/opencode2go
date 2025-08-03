@@ -259,8 +259,8 @@ body {
 
 .message-content ul,
 .message-content ol {
-  margin: 1px 0 1px var(--space-4);
-  padding-left: var(--space-6);
+  margin: 1px 0;
+  padding-left: var(--space-4);
 }
 
 .message-content li {
@@ -1603,7 +1603,7 @@ body {
 .message-content ul,
 .message-content ol {
   margin: var(--space-1) 0;
-  padding-left: var(--space-4);
+  padding-left: var(--space-3);
 }
 
 .message-content li {
@@ -1621,7 +1621,7 @@ body {
 .message-content ul ol,
 .message-content ol ul {
   margin: 0;
-  padding-left: var(--space-3);
+  padding-left: var(--space-2);
 }
 
 .message-content blockquote {
