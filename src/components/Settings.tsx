@@ -7,10 +7,9 @@ import { Dropdown } from "./Dropdown"
 interface SettingsProps {
   isOpen: boolean
   onClose: () => void
-  onSettingsChange?: (settings: AppSettings) => void
 }
 
-export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSettingsChange }) => {
+export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
   const [settings, setSettings] = useState<AppSettings>(settingsService.getSettings())
   const [tempSettings, setTempSettings] = useState<AppSettings>(settings)
 
@@ -25,7 +24,8 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSettingsC
   const handleSave = () => {
     settingsService.saveSettings(tempSettings)
     setSettings(tempSettings)
-    onSettingsChange?.(tempSettings)
+    // No need to call onSettingsChange for appearance-only changes
+    // since they're applied immediately and don't require server reconnection
     onClose()
   }
 
@@ -37,21 +37,20 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSettingsC
   }
 
   const handleReset = () => {
-    settingsService.resetSettings()
-    const resetSettings = settingsService.getSettings()
+    // Only reset appearance settings, keep server settings unchanged
+    const currentSettings = settingsService.getSettings()
+    const resetSettings = {
+      ...currentSettings,
+      appearance: {
+        theme: "dracula",
+        font: "JetBrains Mono",
+        fontSize: 14,
+      }
+    }
+    settingsService.saveSettings(resetSettings)
     setSettings(resetSettings)
     setTempSettings(resetSettings)
-    onSettingsChange?.(resetSettings)
-  }
-
-  const updateServerSettings = (field: keyof AppSettings["server"], value: string | number) => {
-    setTempSettings((prev) => ({
-      ...prev,
-      server: {
-        ...prev.server,
-        [field]: value,
-      },
-    }))
+    // No need to call onSettingsChange for appearance-only changes
   }
 
   const updateAppearanceSettings = (field: keyof AppSettings["appearance"], value: string | number) => {
@@ -123,57 +122,13 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSettingsC
       <div className="settings-overlay" onClick={onClose} />
       <div className="settings-modal">
         <div className="settings-header">
-          <h2>Settings</h2>
+          <h2>Style Settings</h2>
           <button className="settings-close" onClick={onClose}>
             ×
           </button>
         </div>
 
         <div className="settings-content">
-          {/* Server Configuration */}
-          <div className="settings-section">
-            <h3>Server Configuration</h3>
-            <div className="settings-group">
-              <label>Protocol</label>
-              <Dropdown
-                options={[
-                  { value: "http", label: "HTTP" },
-                  { value: "https", label: "HTTPS" },
-                ]}
-                value={tempSettings.server.protocol}
-                onChange={(value) => updateServerSettings("protocol", value as "http" | "https")}
-                maxWidth="150px"
-              />
-            </div>
-            <div className="settings-group">
-              <label>Host</label>
-              <input
-                type="text"
-                value={tempSettings.server.host}
-                onChange={(e) => updateServerSettings("host", e.target.value)}
-                placeholder="localhost"
-                className="settings-input"
-              />
-            </div>
-            <div className="settings-group">
-              <label>Port</label>
-              <input
-                type="number"
-                value={tempSettings.server.port}
-                onChange={(e) => updateServerSettings("port", parseInt(e.target.value) || 3000)}
-                placeholder="3000"
-                className="settings-input"
-                min="1"
-                max="65535"
-              />
-            </div>
-            <div className="settings-info">
-              <span>
-                Server URL: {tempSettings.server.protocol}://{tempSettings.server.host}:{tempSettings.server.port}
-              </span>
-            </div>
-          </div>
-
           {/* Appearance */}
           <div className="settings-section">
             <h3>Appearance</h3>
@@ -219,7 +174,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSettingsC
         <div className="settings-footer">
           <div className="settings-actions-left">
             <button className="settings-button settings-button-secondary" onClick={handleReset}>
-              Reset to Defaults
+              Reset Style to Defaults
             </button>
           </div>
           <div className="settings-actions-right">

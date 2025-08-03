@@ -7,7 +7,7 @@ import { ServerManager } from "./components/ServerManager"
 import { MessagePart } from "./components/MessagePart"
 import { MessageFilter } from "./components/MessageFilter"
 import { CyclingButton } from "./components/CyclingButton"
-import { AppSettings } from "./types/settings"
+
 import { OpenCodeServer } from "./types/servers"
 import { Wrench, Menu, ChevronDown } from "lucide-react"
 import { settingsService } from "./services/settings"
@@ -441,61 +441,7 @@ function App() {
     }
   }
 
-  const handleSettingsChange = (_newSettings: AppSettings) => {
-    // Update the opencode service with new server URL
-    openCodeService.updateServerUrl()
 
-    // Reconnect if the server settings changed
-    const initializeApp = async () => {
-      const connected = await openCodeService.testConnection()
-      setIsConnected(connected)
-
-      if (connected) {
-        // Reload providers, modes, and sessions with new server
-        const { providers: providersData, defaults } = await openCodeService.getProviders()
-        setProviders(providersData)
-
-        const modesData = await openCodeService.getModes()
-        setModes(modesData)
-        if (modesData.length > 0) {
-          setSelectedMode(modesData[0].name)
-        }
-
-        if (providersData.length > 0) {
-          let defaultProvider = providersData.find((p) => p.id === "anthropic") || providersData[0]
-          let defaultModel = defaultProvider.models[0]
-
-          if (defaults[defaultProvider.id]) {
-            const configuredModel = defaultProvider.models.find((m) => m.id === defaults[defaultProvider.id])
-            if (configuredModel) {
-              defaultModel = configuredModel
-            }
-          }
-
-          setSelectedProvider(defaultProvider.id)
-          setSelectedModel(defaultModel.id)
-        }
-
-        const sessionsData = await openCodeService.getSessions()
-        setSessions(sessionsData)
-
-        if (sessionsData.length > 0) {
-          setCurrentSession(sessionsData[0])
-          const sessionMessages = await openCodeService.getMessages(sessionsData[0].id)
-          setMessages(sessionMessages)
-        } else {
-          const session = await openCodeService.createSession()
-          if (session) {
-            setCurrentSession(session)
-            setSessions([session])
-            setMessages([])
-          }
-        }
-      }
-    }
-
-    initializeApp()
-  }
 
 
 
@@ -661,7 +607,6 @@ function App() {
       <Settings
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        onSettingsChange={handleSettingsChange}
       />
     </div>
   )
