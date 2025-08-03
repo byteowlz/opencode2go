@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::net::{IpAddr, Ipv4Addr};
 use std::time::Duration;
 use tokio::time::timeout;
 
@@ -70,7 +69,7 @@ async fn discover_servers() -> Result<Vec<DiscoveredServer>, String> {
     
     for network in local_ips {
         for port in &ports {
-            let servers = scan_network_range(network, *port).await;
+            let servers = scan_network_range(network.clone(), *port).await;
             discovered.extend(servers);
         }
     }
