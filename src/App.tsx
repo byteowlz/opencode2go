@@ -374,6 +374,11 @@ function App() {
     setCurrentServer(serversService.getCurrentServer())
   }
 
+  const handleRefreshDiscovery = async () => {
+    await serversService.refreshDiscovery()
+    setServers(serversService.getServers())
+  }
+
   const handleSend = async () => {
     if (!input.trim() || isLoading || !currentSession || !selectedProvider || !selectedModel) return
 
@@ -602,6 +607,8 @@ function App() {
         onAddServer={handleAddServer}
         onUpdateServer={handleUpdateServer}
         onDeleteServer={handleDeleteServer}
+        onRefreshDiscovery={handleRefreshDiscovery}
+        isDiscoveryInProgress={serversService.isDiscoveryInProgress()}
       />
 
       <Settings

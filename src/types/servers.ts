@@ -6,6 +6,8 @@ export interface OpenCodeServer {
   port: number
   isDefault?: boolean
   lastConnected?: Date
+  isDiscovered?: boolean
+  discoveredAt?: Date
 }
 
 export interface ServerConnectionStatus {

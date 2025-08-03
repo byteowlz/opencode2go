@@ -1,15 +1,19 @@
 import { OpenCodeServer } from "../types/servers"
+import { discoveryService, DiscoveredServer } from "./discovery"
 
 const SERVERS_STORAGE_KEY = "opencode-servers"
 const CURRENT_SERVER_STORAGE_KEY = "opencode-current-server"
 
 class ServersService {
   private servers: OpenCodeServer[] = []
+  private discoveredServers: OpenCodeServer[] = []
   private currentServerId: string | null = null
+  private discoveryStopFn: (() => void) | null = null
 
   constructor() {
     this.loadServers()
     this.loadCurrentServer()
+    this.initializeDiscovery()
   }
 
   private loadServers(): void {
@@ -78,12 +82,13 @@ class ServersService {
   }
 
   getServers(): OpenCodeServer[] {
-    return [...this.servers]
+    return this.getAllServers()
   }
 
   getCurrentServer(): OpenCodeServer | null {
     if (!this.currentServerId) return null
-    return this.servers.find(server => server.id === this.currentServerId) || null
+    const allServers = this.getAllServers()
+    return allServers.find(server => server.id === this.currentServerId) || null
   }
 
   getCurrentServerId(): string | null {
@@ -91,7 +96,8 @@ class ServersService {
   }
 
   setCurrentServer(serverId: string): boolean {
-    const server = this.servers.find(s => s.id === serverId)
+    const allServers = this.getAllServers()
+    const server = allServers.find(s => s.id === serverId)
     if (server) {
       this.currentServerId = serverId
       this.saveCurrentServer()
@@ -150,6 +156,63 @@ class ServersService {
     if (server) {
       server.lastConnected = new Date()
       this.saveServers()
+    }
+  }
+
+  private async initializeDiscovery(): Promise<void> {
+    try {
+      // Set up discovery listener
+      discoveryService.onDiscoveryUpdate((discovered: DiscoveredServer[]) => {
+        this.updateDiscoveredServers(discovered)
+      })
+
+      // Start periodic discovery (every 30 seconds)
+      this.discoveryStopFn = await discoveryService.startPeriodicDiscovery(30000)
+    } catch (error) {
+      console.error("Failed to initialize server discovery:", error)
+    }
+  }
+
+  private updateDiscoveredServers(discovered: DiscoveredServer[]): void {
+    const newDiscoveredServers = discoveryService.convertToOpenCodeServers(discovered)
+    
+    // Filter out discovered servers that are already manually added
+    const manualServerKeys = this.servers
+      .filter(s => !s.isDiscovered)
+      .map(s => `${s.host}:${s.port}`)
+    
+    this.discoveredServers = newDiscoveredServers.filter(server => 
+      !manualServerKeys.includes(`${server.host}:${server.port}`)
+    )
+    
+    console.log(`📡 Updated discovered servers: ${this.discoveredServers.length} found`)
+  }
+
+  getAllServers(): OpenCodeServer[] {
+    // Return manual servers first, then discovered servers
+    return [...this.servers, ...this.discoveredServers]
+  }
+
+  getManualServers(): OpenCodeServer[] {
+    return [...this.servers]
+  }
+
+  getDiscoveredServers(): OpenCodeServer[] {
+    return [...this.discoveredServers]
+  }
+
+  async refreshDiscovery(): Promise<void> {
+    await discoveryService.discoverServers()
+  }
+
+  isDiscoveryInProgress(): boolean {
+    return discoveryService.isDiscoveryInProgress()
+  }
+
+  stopDiscovery(): void {
+    if (this.discoveryStopFn) {
+      this.discoveryStopFn()
+      this.discoveryStopFn = null
     }
   }
 }

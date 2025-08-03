@@ -1,6 +1,6 @@
 import React, { useState } from "react"
 import { OpenCodeServer } from "../types/servers"
-import { X, Plus, Trash2, Edit } from "lucide-react"
+import { X, Plus, Trash2, Edit, Search, Wifi, WifiOff } from "lucide-react"
 import "./ServerManager.css"
 
 interface ServerManagerProps {
@@ -11,6 +11,8 @@ interface ServerManagerProps {
   onAddServer: (server: Omit<OpenCodeServer, "id">) => void
   onUpdateServer: (serverId: string, updates: Partial<Omit<OpenCodeServer, "id">>) => void
   onDeleteServer: (serverId: string) => void
+  onRefreshDiscovery?: () => void
+  isDiscoveryInProgress?: boolean
 }
 
 export const ServerManager: React.FC<ServerManagerProps> = ({
@@ -20,7 +22,9 @@ export const ServerManager: React.FC<ServerManagerProps> = ({
   currentServer,
   onAddServer,
   onUpdateServer,
-  onDeleteServer
+  onDeleteServer,
+  onRefreshDiscovery,
+  isDiscoveryInProgress = false
 }) => {
   const [editingServer, setEditingServer] = useState<OpenCodeServer | null>(null)
   const [isAddingNew, setIsAddingNew] = useState(false)
@@ -97,10 +101,10 @@ export const ServerManager: React.FC<ServerManagerProps> = ({
         </div>
 
         <div className="server-manager-content">
-          {/* Server List */}
+          {/* Manual Servers */}
           <div className="server-list-section">
             <div className="server-list-header">
-              <h3>Servers</h3>
+              <h3>Manual Servers</h3>
               <button className="add-server-button" onClick={handleAddNew}>
                 <Plus size={16} />
                 Add Server
@@ -108,7 +112,7 @@ export const ServerManager: React.FC<ServerManagerProps> = ({
             </div>
 
             <div className="server-list">
-              {servers.map((server) => (
+              {servers.filter(s => !s.isDiscovered).map((server) => (
                 <div
                   key={server.id}
                   className={`server-item ${currentServer?.id === server.id ? "current" : ""}`}
@@ -144,6 +148,82 @@ export const ServerManager: React.FC<ServerManagerProps> = ({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Discovered Servers */}
+          <div className="server-list-section">
+            <div className="server-list-header">
+              <h3>
+                <Wifi size={16} />
+                Discovered Servers
+              </h3>
+              <button 
+                className="refresh-discovery-button" 
+                onClick={onRefreshDiscovery}
+                disabled={isDiscoveryInProgress}
+                title="Refresh Discovery"
+              >
+                <Search size={16} />
+                {isDiscoveryInProgress ? "Scanning..." : "Scan"}
+              </button>
+            </div>
+
+            <div className="server-list">
+              {servers.filter(s => s.isDiscovered).length === 0 ? (
+                <div className="no-servers-message">
+                  {isDiscoveryInProgress ? (
+                    <div className="discovery-progress">
+                      <div className="loading-spinner"></div>
+                      Scanning local network for opencode servers...
+                    </div>
+                  ) : (
+                    <div className="discovery-empty">
+                      <WifiOff size={24} />
+                      <p>No servers discovered on local network</p>
+                      <p className="discovery-hint">Click "Scan" to search for servers</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                servers.filter(s => s.isDiscovered).map((server) => (
+                  <div
+                    key={server.id}
+                    className={`server-item discovered ${currentServer?.id === server.id ? "current" : ""}`}
+                  >
+                    <div className="server-info">
+                      <div className="server-name">
+                        <Wifi size={14} className="discovery-icon" />
+                        {server.name}
+                      </div>
+                      <div className="server-url">
+                        {server.protocol}://{server.host}:{server.port}
+                      </div>
+                      {server.discoveredAt && (
+                        <div className="server-discovered-at">
+                          Discovered: {server.discoveredAt.toLocaleTimeString()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="server-actions">
+                      <button
+                        className="add-discovered-button"
+                        onClick={() => {
+                          onAddServer({
+                            name: server.name.replace(/ \(.*\)$/, ''), // Remove host:port suffix
+                            protocol: server.protocol,
+                            host: server.host,
+                            port: server.port
+                          })
+                        }}
+                        title="Add to Manual Servers"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
