@@ -1,6 +1,7 @@
 import React, { useState } from "react"
 import { OpenCodeServer } from "../types/servers"
 import { X, Plus, Trash2, Edit, Search, Wifi, WifiOff } from "lucide-react"
+import { BrailleSpinner } from "./BrailleSpinner"
 import "./ServerManager.css"
 
 interface ServerManagerProps {
@@ -174,7 +175,7 @@ export const ServerManager: React.FC<ServerManagerProps> = ({
                 <div className="no-servers-message">
                   {isDiscoveryInProgress ? (
                     <div className="discovery-progress">
-                      <div className="loading-spinner"></div>
+                      <BrailleSpinner />
                       Scanning local network for opencode servers...
                     </div>
                   ) : (

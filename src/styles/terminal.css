@@ -1186,7 +1186,7 @@ body {
   background: var(--color-border-active);
 }
 
-/* Loading animation */
+/* Loading animation - kept for backward compatibility */
 .loading {
   display: inline-block;
   width: 12px;
@@ -1200,6 +1200,17 @@ body {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Braille spinner styling */
+.braille-spinner {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  color: var(--color-primary);
+  display: inline-block;
+  width: 1em;
+  text-align: center;
+  line-height: 1;
 }
 
 /* Utility classes */

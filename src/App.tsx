@@ -7,6 +7,7 @@ import { ServerManager } from "./components/ServerManager"
 import { MessagePart } from "./components/MessagePart"
 import { MessageFilter } from "./components/MessageFilter"
 import { CyclingButton } from "./components/CyclingButton"
+import { BrailleSpinner } from "./components/BrailleSpinner"
 
 import { OpenCodeServer } from "./types/servers"
 import { Wrench, Menu, ChevronDown } from "lucide-react"
@@ -561,7 +562,7 @@ function App() {
                 <span className="text-muted">thinking...</span>
               </div>
               <div className="message-content">
-                <div className="loading"></div>
+                <BrailleSpinner />
               </div>
             </div>
           )}
