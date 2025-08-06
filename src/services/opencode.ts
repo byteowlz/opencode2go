@@ -360,14 +360,31 @@ class OpenCodeService {
       const fullUrl = `${this.baseUrl}/session/${sessionId}/message`
       console.log("Full URL:", fullUrl)
       console.log("Request body:", JSON.stringify(requestBody, null, 2))
-
-      // Use Tauri HTTP client to avoid CORS issues
-      const response = await tauriHttpClient.post(`${this.baseUrl}/session/${sessionId}/message`, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
+      console.log("Request headers:", {
+        "Content-Type": "application/json"
       })
+
+      // Try native fetch first, fallback to Tauri HTTP client
+      let response: Response
+      try {
+        console.log("🔧 Trying native fetch")
+        response = await fetch(`${this.baseUrl}/session/${sessionId}/message`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        })
+        console.log("✅ Native fetch succeeded")
+      } catch (fetchError) {
+        console.log("❌ Native fetch failed, using Tauri HTTP client:", fetchError)
+        response = await tauriHttpClient.post(`${this.baseUrl}/session/${sessionId}/message`, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        })
+      }
 
       console.log("Response status:", response.status, response.statusText)
       console.log("Response headers:", response.headers)
