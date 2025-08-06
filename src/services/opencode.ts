@@ -1,6 +1,8 @@
 import { Opencode } from "@opencode-ai/sdk"
 import { settingsService } from "./settings"
 import { tauriHttpClient, tauriFetch } from "./http"
+import { invoke } from "@tauri-apps/api/core"
+import { listen } from "@tauri-apps/api/event"
 
 export interface OpenCodePart {
   id: string
@@ -410,28 +412,67 @@ class OpenCodeService {
       this.eventSource.close()
     }
 
-    this.eventSource = new EventSource(`${this.baseUrl}/event`)
+    // Use Tauri's custom SSE implementation to avoid CORS issues
+    let unlistenMessage: (() => void) | null = null
+    let unlistenError: (() => void) | null = null
 
-    this.eventSource.onmessage = (event) => {
+    const setupTauriSSE = async () => {
       try {
-        const data = JSON.parse(event.data)
-        console.log("📡 SSE Event:", data.type, data)
-        onEvent(data)
-      } catch (error: unknown) {
-        console.error("❌ Failed to parse SSE event:", error, "Raw data:", event.data)
+        // Start the SSE stream in Rust
+        await invoke('start_sse_stream', { url: `${this.baseUrl}/event` })
+        console.log("✅ Tauri SSE stream started for:", `${this.baseUrl}/event`)
+
+        // Listen for SSE messages
+        unlistenMessage = await listen('sse-message', (event) => {
+          try {
+            const data = JSON.parse(event.payload as string)
+            console.log("📡 Tauri SSE Event:", data.type, data)
+            onEvent(data)
+          } catch (error: unknown) {
+            console.error("❌ Failed to parse Tauri SSE event:", error, "Raw data:", event.payload)
+          }
+        })
+
+        // Listen for SSE errors
+        unlistenError = await listen('sse-error', (event) => {
+          console.error("❌ Tauri SSE error:", event.payload)
+        })
+
+      } catch (error) {
+        console.error("❌ Failed to start Tauri SSE stream:", error)
+        // Fallback to browser EventSource
+        this.eventSource = new EventSource(`${this.baseUrl}/event`)
+
+        this.eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data)
+            console.log("📡 SSE Event:", data.type, data)
+            onEvent(data)
+          } catch (error: unknown) {
+            console.error("❌ Failed to parse SSE event:", error, "Raw data:", event.data)
+          }
+        }
+
+        this.eventSource.onerror = (error) => {
+          console.error("❌ EventSource error:", error)
+          console.log("EventSource readyState:", this.eventSource?.readyState)
+        }
+
+        this.eventSource.onopen = () => {
+          console.log("✅ EventSource connected to:", `${this.baseUrl}/event`)
+        }
       }
     }
 
-    this.eventSource.onerror = (error) => {
-      console.error("❌ EventSource error:", error)
-      console.log("EventSource readyState:", this.eventSource?.readyState)
-    }
-
-    this.eventSource.onopen = () => {
-      console.log("✅ EventSource connected to:", `${this.baseUrl}/event`)
-    }
+    setupTauriSSE()
 
     return () => {
+      if (unlistenMessage) {
+        unlistenMessage()
+      }
+      if (unlistenError) {
+        unlistenError()
+      }
       if (this.eventSource) {
         this.eventSource.close()
         this.eventSource = null

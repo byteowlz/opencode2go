@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import "./styles/terminal.css"
 import { openCodeService, OpenCodeMessage, OpenCodeSession, OpenCodeProvider, OpenCodeMode } from "./services/opencode"
 import { Settings } from "./components/Settings"
@@ -73,12 +73,12 @@ function App() {
   }
 
   // Check if user has scrolled up from bottom
-  const handleScroll = () => {
+  const handleScroll = useCallback(() => {
     if (messagesContainerRef.current) {
       const atBottom = isAtBottom()
       setShowScrollButton(!atBottom && messages.length > 0)
     }
-  }
+  }, [messages.length])
 
   // Smart auto-scroll: only scroll if user is already at bottom
   useEffect(() => {
@@ -106,7 +106,7 @@ function App() {
       container.addEventListener('scroll', handleScroll)
       return () => container.removeEventListener('scroll', handleScroll)
     }
-  }, [])
+  }, [handleScroll])
 
   // Update logo when theme changes
   useEffect(() => {

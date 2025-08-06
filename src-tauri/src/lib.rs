@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::time::timeout;
+use tauri::{AppHandle, Emitter};
+use tokio_stream::StreamExt;
 
 #[derive(Serialize, Deserialize)]
 struct HttpResponse {
@@ -154,6 +156,58 @@ async fn check_opencode_server(host: String, port: u16) -> Option<DiscoveredServ
 }
 
 #[tauri::command]
+async fn start_sse_stream(app: AppHandle, url: String) -> Result<(), String> {
+    let client = reqwest::Client::new();
+    
+    tokio::spawn(async move {
+        match client.get(&url).send().await {
+            Ok(response) => {
+                let mut stream = response.bytes_stream();
+                let mut buffer = String::new();
+                
+                while let Some(chunk) = stream.next().await {
+                    match chunk {
+                        Ok(bytes) => {
+                            let text = String::from_utf8_lossy(&bytes);
+                            buffer.push_str(&text);
+                            
+                            // Process complete SSE messages
+                            while let Some(pos) = buffer.find("\n\n") {
+                                let message = buffer[..pos].to_string();
+                                buffer = buffer[pos + 2..].to_string();
+                                
+                                // Parse SSE message
+                                if let Some(data) = parse_sse_message(&message) {
+                                    let _ = app.emit("sse-message", data);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            let _ = app.emit("sse-error", format!("Stream error: {}", e));
+                            break;
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                let _ = app.emit("sse-error", format!("Connection error: {}", e));
+            }
+        }
+    });
+    
+    Ok(())
+}
+
+fn parse_sse_message(message: &str) -> Option<String> {
+    for line in message.lines() {
+        if line.starts_with("data: ") {
+            return Some(line[6..].to_string());
+        }
+    }
+    None
+}
+
+#[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
@@ -162,7 +216,7 @@ fn greet(name: &str) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, http_get, http_post, discover_servers])
+        .invoke_handler(tauri::generate_handler![greet, http_get, http_post, discover_servers, start_sse_stream])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
