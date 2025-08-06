@@ -264,7 +264,7 @@ function App() {
             // Handle streaming message parts
             const part = event.properties?.part
             if (part && currentSessionRef.current && part.sessionID === currentSessionRef.current.id) {
-              console.log("✅ Processing message part:", part.type, part.messageID)
+              console.log("✅ Processing message part:", part.type, part.messageID, "Content:", part.text?.substring(0, 50))
               
               setMessages((prevMessages) => {
                 const messageIndex = prevMessages.findIndex(msg => msg.id === part.messageID)
@@ -350,6 +350,7 @@ function App() {
                     timestamp: new Date(),
                   }
                   
+                  console.log("➕ Added message to UI:", newMessage.role, newMessage.id, "Content:", newMessage.content.substring(0, 50))
                   return [...prevMessages, newMessage]
                 }
               })
@@ -385,10 +386,18 @@ function App() {
   }, [currentServer])
 
   const handleSessionChange = async (sessionId: string, serverId?: string) => {
+    console.log("🔄 Session change requested:", {
+      sessionId,
+      serverId,
+      currentServerId: currentServer?.id,
+      needsServerSwitch: serverId && serverId !== currentServer?.id
+    })
+    
     const session = sessions.find((s) => s.id === sessionId)
     if (session) {
       // If session is from a different server, switch to that server first
       if (serverId && serverId !== currentServer?.id) {
+        console.log("🔀 Switching to server:", serverId)
         const targetServer = servers.find(s => s.id === serverId)
         if (targetServer) {
           await handleServerChange(serverId)
@@ -554,25 +563,34 @@ function App() {
   const handleSend = async () => {
     if (!input.trim() || isLoading || !currentSession || !selectedProvider || !selectedModel) return
 
+    console.log("📤 Sending message:", {
+      sessionId: currentSession.id,
+      sessionServerId: currentSession.serverId,
+      currentServerId: currentServer?.id,
+      serverMatch: currentSession.serverId === currentServer?.id
+    })
+
     const messageContent = input.trim()
     setInput("")
     setIsLoading(true)
 
     try {
+      // Generate message ID before sending (same logic as in opencode service)
+      const messageId = `msg_${Date.now()}`
+      
+      // Track this message ID as a user message BEFORE sending
+      console.log("📤 Pre-tracking sent message ID:", messageId)
+      setSentMessageIds(prev => new Set([...prev, messageId]))
+      
       // Send the message - the response will come through the event stream
-      const messageId = await openCodeService.sendMessage(
+      await openCodeService.sendMessage(
         currentSession.id,
         messageContent,
         selectedProvider,
         selectedModel,
         selectedMode,
+        messageId // Pass the messageId to ensure consistency
       )
-      
-      // Track this message ID as a user message
-      if (messageId) {
-        console.log("📤 Tracking sent message ID:", messageId)
-        setSentMessageIds(prev => new Set([...prev, messageId]))
-      }
       
       // The loading state will be managed by the streaming events
     } catch (error) {

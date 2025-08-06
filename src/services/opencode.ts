@@ -325,7 +325,8 @@ class OpenCodeService {
     content: string,
     providerID: string,
     modelID: string,
-    mode: string = "build"
+    mode: string = "build",
+    messageID?: string
   ): Promise<string | null> {
     try {
       console.log("=== SENDING MESSAGE ===")
@@ -336,11 +337,11 @@ class OpenCodeService {
       console.log("Mode:", mode)
       console.log("Content:", content)
 
-      const messageID = `msg_${Date.now()}`
+      const finalMessageID = messageID || `msg_${Date.now()}`
       const partID = `part_${Date.now()}`
 
       const requestBody = {
-        messageID,
+        messageID: finalMessageID,
         providerID,
         modelID,
         mode,
@@ -348,7 +349,7 @@ class OpenCodeService {
           {
             id: partID,
             sessionID: sessionId,
-            messageID,
+            messageID: finalMessageID,
             type: "text",
             text: content,
           },
@@ -386,7 +387,7 @@ class OpenCodeService {
       console.log("Message sent successfully, response will come via Server-Sent Events")
       
       // Return the messageID so caller can track it
-      return messageID
+      return finalMessageID
     } catch (error: unknown) {
       console.error("Failed to send message:", error)
       const errorObj = error as any
