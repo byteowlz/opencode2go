@@ -326,7 +326,7 @@ class OpenCodeService {
     providerID: string,
     modelID: string,
     mode: string = "build"
-  ): Promise<OpenCodeMessage | null> {
+  ): Promise<string | null> {
     try {
       console.log("=== SENDING MESSAGE ===")
       console.log("Base URL:", this.baseUrl)
@@ -385,25 +385,15 @@ class OpenCodeService {
       // The POST request just initiates the conversation, real response comes via events
       console.log("Message sent successfully, response will come via Server-Sent Events")
       
-      // Return null to indicate that the response will come through events
-      return null
+      // Return the messageID so caller can track it
+      return messageID
     } catch (error: unknown) {
       console.error("Failed to send message:", error)
       const errorObj = error as any
       console.error("Error details:", errorObj)
 
-      // Return an error message
-      return {
-        id: `msg_${Date.now() + 1}`,
-        role: "assistant",
-        content: `Error: ${errorObj?.message || "Unknown error occurred"}`,
-        parts: [{
-          id: `part_${Date.now() + 1}`,
-          type: "text",
-          text: `Error: ${errorObj?.message || "Unknown error occurred"}`
-        }],
-        timestamp: new Date(),
-      }
+      // Return null for errors - let the UI handle error display
+      return null
     }
   }
 

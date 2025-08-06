@@ -24,13 +24,10 @@ function App() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const currentSessionRef = useRef<OpenCodeSession | null>(null)
+  const sentMessageIdsRef = useRef<Set<string>>(new Set())
   const [showScrollButton, setShowScrollButton] = useState(false)
   const [currentSession, setCurrentSession] = useState<OpenCodeSession | null>(null)
   
-  // Update ref whenever currentSession changes
-  useEffect(() => {
-    currentSessionRef.current = currentSession
-  }, [currentSession])
   const [sessions, setSessions] = useState<OpenCodeSession[]>([])
   const [providers, setProviders] = useState<OpenCodeProvider[]>([])
   const [selectedProvider, setSelectedProvider] = useState<string>("")
@@ -46,6 +43,16 @@ function App() {
   const [servers, setServers] = useState<OpenCodeServer[]>([])
   const [currentServer, setCurrentServer] = useState<OpenCodeServer | null>(null)
   const [showAllSessions, setShowAllSessions] = useState(false)
+  const [sentMessageIds, setSentMessageIds] = useState<Set<string>>(new Set())
+
+  // Update refs whenever state changes
+  useEffect(() => {
+    currentSessionRef.current = currentSession
+  }, [currentSession])
+  
+  useEffect(() => {
+    sentMessageIdsRef.current = sentMessageIds
+  }, [sentMessageIds])
 
   // Message filter state
   const [messageFilters, setMessageFilters] = useState<{
@@ -256,21 +263,11 @@ function App() {
           } else if (event.type === "message.part.updated") {
             // Handle streaming message parts
             const part = event.properties?.part
-            console.log("🔍 Message part event:", {
-              partExists: !!part,
-              currentSessionExists: !!currentSessionRef.current,
-              partSessionID: part?.sessionID,
-              currentSessionID: currentSessionRef.current?.id,
-              matches: part && currentSessionRef.current && part.sessionID === currentSessionRef.current.id
-            })
             if (part && currentSessionRef.current && part.sessionID === currentSessionRef.current.id) {
-              console.log("✅ Processing message part:", part.type, part)
+              console.log("✅ Processing message part:", part.type, part.messageID)
               
               setMessages((prevMessages) => {
-                console.log("📝 Current messages count:", prevMessages.length)
-                console.log("🔍 Looking for message ID:", part.messageID)
                 const messageIndex = prevMessages.findIndex(msg => msg.id === part.messageID)
-                console.log("📍 Message index found:", messageIndex)
                 
                 if (messageIndex >= 0) {
                   // Update existing message
@@ -310,14 +307,30 @@ function App() {
                   const textParts = updatedMessages[messageIndex].parts.filter(p => p.type === "text")
                   updatedMessages[messageIndex].content = textParts.map(p => p.text || "").join("\n")
                   
-                  console.log("🔄 Updated existing message, new content:", updatedMessages[messageIndex].content)
                   return updatedMessages
                 } else {
                   // Create new message if it doesn't exist
+                  // Check if this is a user message by looking at sent message IDs
+                  const isUserMessage = sentMessageIdsRef.current.has(part.messageID)
+                  
+                  // Generate appropriate content based on part type
+                  let content = ""
+                  if (part.type === "text") {
+                    content = part.text || ""
+                  } else if (part.type === "step-start") {
+                    content = `Starting: ${part.text || "Processing..."}`
+                  } else if (part.type === "step-finish") {
+                    content = `Completed: ${part.text || "Done"}`
+                  } else if (part.type === "tool") {
+                    content = `Tool: ${part.tool || "Unknown tool"}`
+                  } else if (part.type === "tool-invocation") {
+                    content = `Invoking: ${part.invocation?.tool || "Unknown tool"}`
+                  }
+                  
                   const newMessage: OpenCodeMessage = {
                     id: part.messageID,
-                    role: "assistant",
-                    content: part.type === "text" ? (part.text || "") : "",
+                    role: isUserMessage ? "user" : "assistant",
+                    content,
                     parts: [{
                       id: part.id,
                       type: part.type,
@@ -331,7 +344,6 @@ function App() {
                     timestamp: new Date(),
                   }
                   
-                  console.log("➕ Created new message:", newMessage.id, newMessage.content)
                   return [...prevMessages, newMessage]
                 }
               })
@@ -536,44 +548,26 @@ function App() {
   const handleSend = async () => {
     if (!input.trim() || isLoading || !currentSession || !selectedProvider || !selectedModel) return
 
-    const userMessage: OpenCodeMessage = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input.trim(),
-      parts: [{
-        id: `part_${Date.now()}`,
-        type: "text",
-        text: input.trim()
-      }],
-      timestamp: new Date(),
-    }
-
-    setMessages((prev) => [...prev, userMessage])
+    const messageContent = input.trim()
     setInput("")
     setIsLoading(true)
 
     try {
       // Send the message - the response will come through the event stream
-      await openCodeService.sendMessage(
+      const messageId = await openCodeService.sendMessage(
         currentSession.id,
-        userMessage.content,
+        messageContent,
         selectedProvider,
         selectedModel,
         selectedMode,
       )
       
+      // Track this message ID as a user message
+      if (messageId) {
+        setSentMessageIds(prev => new Set([...prev, messageId]))
+      }
+      
       // The loading state will be managed by the streaming events
-      // Add a fallback timeout in case events don't work
-      setTimeout(async () => {
-        console.log("⏰ Fallback timeout - reloading messages")
-        setIsLoading(false)
-        try {
-          const sessionMessages = await openCodeService.getMessages(currentSession.id)
-          setMessages(sessionMessages)
-        } catch (error) {
-          console.error("Failed to reload messages:", error)
-        }
-      }, 15000) // 15 second fallback
     } catch (error) {
       console.error("Failed to send message:", error)
       const errorMessage: OpenCodeMessage = {
