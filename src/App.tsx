@@ -218,7 +218,7 @@ function App() {
 
         // Subscribe to events for automatic session updates and message streaming
         const unsubscribe = openCodeService.subscribeToEvents((event) => {
-          console.log("Received event:", event.type, event)
+          console.log("🔔 Event received:", event.type, event)
           
           if (event.type === "session.updated") {
             // Update the session in our list when it gets updated (e.g., title change)
@@ -251,7 +251,7 @@ function App() {
             // Handle streaming message parts
             const part = event.properties?.part
             if (part && currentSession && part.sessionID === currentSession.id) {
-              console.log("Processing message part:", part)
+              console.log("✅ Processing message part:", part.type, part)
               
               setMessages((prevMessages) => {
                 const messageIndex = prevMessages.findIndex(msg => msg.id === part.messageID)
@@ -363,6 +363,12 @@ function App() {
       // Load messages for the selected session
       const sessionMessages = await openCodeService.getMessages(sessionId)
       setMessages(sessionMessages)
+      
+      // Auto-scroll to bottom when selecting a session
+      setTimeout(scrollToBottom, 100)
+      
+      // Hide sidebar when selecting a session
+      setIsSidebarOpen(false)
     }
   }
 
@@ -539,7 +545,17 @@ function App() {
       )
       
       // The loading state will be managed by the streaming events
-      // Keep loading until we receive message parts through events
+      // Add a fallback timeout in case events don't work
+      setTimeout(async () => {
+        console.log("⏰ Fallback timeout - reloading messages")
+        setIsLoading(false)
+        try {
+          const sessionMessages = await openCodeService.getMessages(currentSession.id)
+          setMessages(sessionMessages)
+        } catch (error) {
+          console.error("Failed to reload messages:", error)
+        }
+      }, 15000) // 15 second fallback
     } catch (error) {
       console.error("Failed to send message:", error)
       const errorMessage: OpenCodeMessage = {

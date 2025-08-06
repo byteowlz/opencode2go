@@ -379,21 +379,12 @@ class OpenCodeService {
         throw new Error(`HTTP ${response.status}: ${errorText}`)
       }
 
-      // The response will come through the event stream, not as a direct response
-      // Just return a placeholder message that will be updated via events
-      console.log("Message sent successfully, waiting for response via events...")
+      // OpenCode always streams responses through Server-Sent Events
+      // The POST request just initiates the conversation, real response comes via events
+      console.log("Message sent successfully, response will come via Server-Sent Events")
       
-      return {
-        id: messageID,
-        role: "user",
-        content: content,
-        parts: [{
-          id: partID,
-          type: "text",
-          text: content
-        }],
-        timestamp: new Date(),
-      }
+      // Return null to indicate that the response will come through events
+      return null
     } catch (error: unknown) {
       console.error("Failed to send message:", error)
       const errorObj = error as any
@@ -424,15 +415,20 @@ class OpenCodeService {
     this.eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data)
-        console.log("Received event:", data)
+        console.log("📡 SSE Event:", data.type, data)
         onEvent(data)
       } catch (error: unknown) {
-        console.error("Failed to parse event:", error)
+        console.error("❌ Failed to parse SSE event:", error, "Raw data:", event.data)
       }
     }
 
     this.eventSource.onerror = (error) => {
-      console.error("EventSource error:", error)
+      console.error("❌ EventSource error:", error)
+      console.log("EventSource readyState:", this.eventSource?.readyState)
+    }
+
+    this.eventSource.onopen = () => {
+      console.log("✅ EventSource connected to:", `${this.baseUrl}/event`)
     }
 
     return () => {
