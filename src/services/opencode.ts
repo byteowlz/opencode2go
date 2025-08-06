@@ -379,43 +379,20 @@ class OpenCodeService {
         throw new Error(`HTTP ${response.status}: ${errorText}`)
       }
 
-      // For now, let's handle as regular JSON response since Tauri HTTP client may not support streaming the same way
-      const data = await response.json()
-      console.log("Chat response received:", data)
-
-      // Extract the actual response content from the data
-      let responseContent = "Response received"
-
-      if (data && data.parts && Array.isArray(data.parts)) {
-        const textParts = data.parts.filter((part: any) => part.type === "text")
-        if (textParts.length > 0) {
-          responseContent = textParts.map((part: any) => part.text).join("\n")
-        }
-      } else if (typeof data === 'string') {
-        responseContent = data
-      } else if (data && data.content) {
-        responseContent = data.content
-      }
-
+      // The response will come through the event stream, not as a direct response
+      // Just return a placeholder message that will be updated via events
+      console.log("Message sent successfully, waiting for response via events...")
+      
       return {
-        id: data.id || messageID,
-        role: "assistant",
-        content: responseContent,
-        parts: data.parts ? data.parts.map((part: any) => ({
-          id: part.id,
-          type: part.type,
-          text: part.text,
-          tool: part.tool,
-          filename: part.filename,
-          snapshot: part.snapshot,
-          invocation: part.invocation,
-          state: part.state
-        })) : [{
-          id: `part_${Date.now()}`,
+        id: messageID,
+        role: "user",
+        content: content,
+        parts: [{
+          id: partID,
           type: "text",
-          text: responseContent
+          text: content
         }],
-        timestamp: new Date(data.time?.created ? data.time.created * 1000 : Date.now()),
+        timestamp: new Date(),
       }
     } catch (error: unknown) {
       console.error("Failed to send message:", error)

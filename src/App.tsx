@@ -216,8 +216,10 @@ function App() {
           }
         }
 
-        // Subscribe to events for automatic session updates
+        // Subscribe to events for automatic session updates and message streaming
         const unsubscribe = openCodeService.subscribeToEvents((event) => {
+          console.log("Received event:", event.type, event)
+          
           if (event.type === "session.updated") {
             // Update the session in our list when it gets updated (e.g., title change)
             const updatedSession = event.properties?.info
@@ -244,6 +246,91 @@ function App() {
                   }
                   : prevSession,
               )
+            }
+          } else if (event.type === "message.part.updated") {
+            // Handle streaming message parts
+            const part = event.properties?.part
+            if (part && currentSession && part.sessionID === currentSession.id) {
+              console.log("Processing message part:", part)
+              
+              setMessages((prevMessages) => {
+                const messageIndex = prevMessages.findIndex(msg => msg.id === part.messageID)
+                
+                if (messageIndex >= 0) {
+                  // Update existing message
+                  const updatedMessages = [...prevMessages]
+                  const existingMessage = updatedMessages[messageIndex]
+                  
+                  // Check if this part already exists
+                  const partIndex = existingMessage.parts.findIndex(p => p.id === part.id)
+                  
+                  if (partIndex >= 0) {
+                    // Update existing part
+                    updatedMessages[messageIndex].parts[partIndex] = {
+                      id: part.id,
+                      type: part.type,
+                      text: part.text,
+                      tool: part.tool,
+                      filename: part.filename,
+                      snapshot: part.snapshot,
+                      invocation: part.invocation,
+                      state: part.state
+                    }
+                  } else {
+                    // Add new part
+                    updatedMessages[messageIndex].parts.push({
+                      id: part.id,
+                      type: part.type,
+                      text: part.text,
+                      tool: part.tool,
+                      filename: part.filename,
+                      snapshot: part.snapshot,
+                      invocation: part.invocation,
+                      state: part.state
+                    })
+                  }
+                  
+                  // Update content from text parts
+                  const textParts = updatedMessages[messageIndex].parts.filter(p => p.type === "text")
+                  updatedMessages[messageIndex].content = textParts.map(p => p.text || "").join("\n")
+                  
+                  return updatedMessages
+                } else {
+                  // Create new message if it doesn't exist
+                  const newMessage: OpenCodeMessage = {
+                    id: part.messageID,
+                    role: "assistant",
+                    content: part.type === "text" ? (part.text || "") : "",
+                    parts: [{
+                      id: part.id,
+                      type: part.type,
+                      text: part.text,
+                      tool: part.tool,
+                      filename: part.filename,
+                      snapshot: part.snapshot,
+                      invocation: part.invocation,
+                      state: part.state
+                    }],
+                    timestamp: new Date(),
+                  }
+                  
+                  return [...prevMessages, newMessage]
+                }
+              })
+            }
+          } else if (event.type === "message.updated") {
+            // Message is complete, stop loading
+            const messageInfo = event.properties?.info
+            if (messageInfo && currentSession && messageInfo.sessionID === currentSession.id) {
+              console.log("Message updated/completed:", messageInfo)
+              setIsLoading(false)
+            }
+          } else if (event.type === "session.idle") {
+            // Session is idle, stop loading
+            const sessionInfo = event.properties
+            if (sessionInfo && currentSession && sessionInfo.sessionID === currentSession.id) {
+              console.log("Session idle:", sessionInfo)
+              setIsLoading(false)
             }
           }
         })
@@ -442,17 +529,17 @@ function App() {
     setIsLoading(true)
 
     try {
-      const response = await openCodeService.sendMessage(
+      // Send the message - the response will come through the event stream
+      await openCodeService.sendMessage(
         currentSession.id,
         userMessage.content,
         selectedProvider,
         selectedModel,
         selectedMode,
       )
-
-      if (response) {
-        setMessages((prev) => [...prev, response])
-      }
+      
+      // The loading state will be managed by the streaming events
+      // Keep loading until we receive message parts through events
     } catch (error) {
       console.error("Failed to send message:", error)
       const errorMessage: OpenCodeMessage = {
@@ -468,7 +555,6 @@ function App() {
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, errorMessage])
-    } finally {
       setIsLoading(false)
     }
   }
