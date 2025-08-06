@@ -471,6 +471,33 @@ class OpenCodeService {
       return false
     }
   }
+
+  async updatePermissions(permissions: { edit?: string; bash?: string }): Promise<boolean> {
+    try {
+      console.log("=== UPDATING PERMISSIONS ===")
+      console.log("Permissions:", permissions)
+      
+      const response = await tauriHttpClient.post(`${this.baseUrl}/config/permission`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ permission: permissions }),
+      })
+
+      console.log("Permission update response:", response.status, response.statusText)
+      
+      if (!response.ok) {
+        console.error("Permission update failed:", response.status)
+        return false
+      }
+
+      console.log("=== PERMISSIONS UPDATED ===")
+      return true
+    } catch (error: unknown) {
+      console.error("Failed to update permissions:", error)
+      return false
+    }
+  }
 }
 
 export const openCodeService = new OpenCodeService()

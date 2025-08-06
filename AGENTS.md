@@ -33,6 +33,8 @@
 - AVOID `any` type and `let` statements
 - PREFER single word variable names
 - Use Bun APIs like `Bun.file()` over Node.js equivalents
+- Always run cd src-tauri && cargo check after changing something on the rust side
+- Always run bun run build after changing soemthing on the typscript side
 
 ## Building for iOS
 

@@ -1,3 +1,5 @@
+export type Permission = "ask" | "allow" | "deny"
+
 export interface AppSettings {
   server: {
     host: string
@@ -8,6 +10,10 @@ export interface AppSettings {
     theme: string
     font: string
     fontSize: number
+  }
+  permissions: {
+    edit: Permission
+    bash: Permission
   }
 }
 
@@ -21,6 +27,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
     theme: "dracula",
     font: "JetBrains Mono",
     fontSize: 14,
+  },
+  permissions: {
+    edit: "ask",
+    bash: "ask",
   },
 }
 

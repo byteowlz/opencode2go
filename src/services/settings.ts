@@ -20,6 +20,7 @@ class SettingsService {
         // Ensure nested objects are properly merged
         this.settings.server = { ...DEFAULT_SETTINGS.server, ...parsed.server }
         this.settings.appearance = { ...DEFAULT_SETTINGS.appearance, ...parsed.appearance }
+        this.settings.permissions = { ...DEFAULT_SETTINGS.permissions, ...parsed.permissions }
       }
 
       // Sync with theme switcher's storage if it exists
@@ -42,6 +43,7 @@ class SettingsService {
       ...newSettings,
       server: { ...this.settings.server, ...newSettings.server },
       appearance: { ...this.settings.appearance, ...newSettings.appearance },
+      permissions: { ...this.settings.permissions, ...newSettings.permissions },
     }
 
     try {

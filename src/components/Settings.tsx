@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react"
-import { AppSettings, AVAILABLE_FONTS, FONT_SIZES } from "../types/settings"
+import { AppSettings, AVAILABLE_FONTS, FONT_SIZES, Permission } from "../types/settings"
 import { settingsService } from "../services/settings"
+import { openCodeService } from "../services/opencode"
 import { getThemeNames, themes, getTheme, applyTheme } from "../themes"
 import { Dropdown } from "./Dropdown"
 
@@ -21,11 +22,20 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen])
 
-  const handleSave = () => {
+  const handleSave = async () => {
     settingsService.saveSettings(tempSettings)
     setSettings(tempSettings)
-    // No need to call onSettingsChange for appearance-only changes
-    // since they're applied immediately and don't require server reconnection
+    
+    // Send permission updates to the opencode server
+    try {
+      await openCodeService.updatePermissions({
+        edit: tempSettings.permissions.edit,
+        bash: tempSettings.permissions.bash,
+      })
+    } catch (error) {
+      console.error("Failed to update server permissions:", error)
+    }
+    
     onClose()
   }
 
@@ -37,7 +47,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
   }
 
   const handleReset = () => {
-    // Only reset appearance settings, keep server settings unchanged
+    // Reset appearance and permissions settings, keep server settings unchanged
     const currentSettings = settingsService.getSettings()
     const resetSettings = {
       ...currentSettings,
@@ -45,12 +55,26 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
         theme: "dracula",
         font: "JetBrains Mono",
         fontSize: 14,
+      },
+      permissions: {
+        edit: "ask" as Permission,
+        bash: "ask" as Permission,
       }
     }
     settingsService.saveSettings(resetSettings)
     setSettings(resetSettings)
     setTempSettings(resetSettings)
-    // No need to call onSettingsChange for appearance-only changes
+  }
+
+  const updatePermissionSettings = (field: keyof AppSettings["permissions"], value: Permission) => {
+    const newTempSettings = {
+      ...tempSettings,
+      permissions: {
+        ...tempSettings.permissions,
+        [field]: value,
+      },
+    }
+    setTempSettings(newTempSettings)
   }
 
   const updateAppearanceSettings = (field: keyof AppSettings["appearance"], value: string | number) => {
@@ -122,7 +146,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
       <div className="settings-overlay" onClick={onClose} />
       <div className="settings-modal">
         <div className="settings-header">
-          <h2>Style Settings</h2>
+          <h2>Settings</h2>
           <button className="settings-close" onClick={onClose}>
             ×
           </button>
@@ -169,12 +193,43 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
               />
             </div>
           </div>
+
+          {/* Permissions */}
+          <div className="settings-section">
+            <h3>Tool Permissions</h3>
+            <div className="settings-group">
+              <label>File Editing</label>
+              <Dropdown
+                options={[
+                  { value: "ask", label: "Ask" },
+                  { value: "allow", label: "Allow" },
+                  { value: "deny", label: "Deny" },
+                ]}
+                value={tempSettings.permissions.edit}
+                onChange={(value) => updatePermissionSettings("edit", value as Permission)}
+                maxWidth="150px"
+              />
+            </div>
+            <div className="settings-group">
+              <label>Bash Commands</label>
+              <Dropdown
+                options={[
+                  { value: "ask", label: "Ask" },
+                  { value: "allow", label: "Allow" },
+                  { value: "deny", label: "Deny" },
+                ]}
+                value={tempSettings.permissions.bash}
+                onChange={(value) => updatePermissionSettings("bash", value as Permission)}
+                maxWidth="150px"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="settings-footer">
           <div className="settings-actions-left">
             <button className="settings-button settings-button-secondary" onClick={handleReset}>
-              Reset Style to Defaults
+              Reset to Defaults
             </button>
           </div>
           <div className="settings-actions-right">
