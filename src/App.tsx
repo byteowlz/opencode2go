@@ -312,6 +312,12 @@ function App() {
                   // Create new message if it doesn't exist
                   // Check if this is a user message by looking at sent message IDs
                   const isUserMessage = sentMessageIdsRef.current.has(part.messageID)
+                  console.log("🔍 Role check:", {
+                    messageID: part.messageID,
+                    sentIds: Array.from(sentMessageIdsRef.current),
+                    isUserMessage,
+                    role: isUserMessage ? "user" : "assistant"
+                  })
                   
                   // Generate appropriate content based on part type
                   let content = ""
@@ -564,6 +570,7 @@ function App() {
       
       // Track this message ID as a user message
       if (messageId) {
+        console.log("📤 Tracking sent message ID:", messageId)
         setSentMessageIds(prev => new Set([...prev, messageId]))
       }
       
