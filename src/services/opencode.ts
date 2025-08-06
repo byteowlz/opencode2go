@@ -349,8 +349,6 @@ class OpenCodeService {
         parts: [
           {
             id: partID,
-            sessionID: sessionId,
-            messageID: finalMessageID,
             type: "text",
             text: content,
           },
