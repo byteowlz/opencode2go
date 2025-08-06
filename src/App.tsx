@@ -561,7 +561,19 @@ function App() {
   }
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading || !currentSession || !selectedProvider || !selectedModel) return
+    console.log("🚀 handleSend called with:", {
+      inputTrim: input.trim(),
+      isLoading,
+      currentSession: currentSession?.id,
+      selectedProvider,
+      selectedModel,
+      canSend: !(!input.trim() || isLoading || !currentSession || !selectedProvider || !selectedModel)
+    })
+    
+    if (!input.trim() || isLoading || !currentSession || !selectedProvider || !selectedModel) {
+      console.log("❌ Cannot send message - missing requirements")
+      return
+    }
 
     console.log("📤 Sending message:", {
       sessionId: currentSession.id,
@@ -614,6 +626,7 @@ function App() {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
+      console.log("⌨️ Enter key pressed, calling handleSend")
       e.preventDefault()
       handleSend()
     }

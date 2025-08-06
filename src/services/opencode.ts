@@ -336,6 +336,7 @@ class OpenCodeService {
       console.log("Model ID:", modelID)
       console.log("Mode:", mode)
       console.log("Content:", content)
+      console.log("Provided messageID:", messageID)
 
       const finalMessageID = messageID || `msg_${Date.now()}`
       const partID = `part_${Date.now()}`
