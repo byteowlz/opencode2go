@@ -339,29 +339,15 @@ class OpenCodeService {
       console.log("Provided messageID:", messageID)
 
       const finalMessageID = messageID || `msg_${Date.now()}`
-      const partID = `part_${Date.now()}`
 
-      // Get mode configuration to include tools
-      let tools: Record<string, boolean> = {}
-      try {
-        const modes = await this.getModes()
-        const selectedMode = modes.find(m => m.name === mode)
-        if (selectedMode) {
-          tools = selectedMode.tools
-        }
-      } catch (error) {
-        console.warn("Failed to get mode configuration, using empty tools:", error)
-      }
-
+      // Match TUI request format exactly - no tools, no system, minimal parts
       const requestBody = {
         messageID: finalMessageID,
         providerID,
         modelID,
         mode,
-        tools,
         parts: [
           {
-            id: partID,
             type: "text",
             text: content,
           },
