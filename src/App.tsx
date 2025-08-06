@@ -23,8 +23,14 @@ function App() {
   // Ref for auto-scrolling to bottom
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const currentSessionRef = useRef<OpenCodeSession | null>(null)
   const [showScrollButton, setShowScrollButton] = useState(false)
   const [currentSession, setCurrentSession] = useState<OpenCodeSession | null>(null)
+  
+  // Update ref whenever currentSession changes
+  useEffect(() => {
+    currentSessionRef.current = currentSession
+  }, [currentSession])
   const [sessions, setSessions] = useState<OpenCodeSession[]>([])
   const [providers, setProviders] = useState<OpenCodeProvider[]>([])
   const [selectedProvider, setSelectedProvider] = useState<string>("")
@@ -250,11 +256,21 @@ function App() {
           } else if (event.type === "message.part.updated") {
             // Handle streaming message parts
             const part = event.properties?.part
-            if (part && currentSession && part.sessionID === currentSession.id) {
+            console.log("🔍 Message part event:", {
+              partExists: !!part,
+              currentSessionExists: !!currentSessionRef.current,
+              partSessionID: part?.sessionID,
+              currentSessionID: currentSessionRef.current?.id,
+              matches: part && currentSessionRef.current && part.sessionID === currentSessionRef.current.id
+            })
+            if (part && currentSessionRef.current && part.sessionID === currentSessionRef.current.id) {
               console.log("✅ Processing message part:", part.type, part)
               
               setMessages((prevMessages) => {
+                console.log("📝 Current messages count:", prevMessages.length)
+                console.log("🔍 Looking for message ID:", part.messageID)
                 const messageIndex = prevMessages.findIndex(msg => msg.id === part.messageID)
+                console.log("📍 Message index found:", messageIndex)
                 
                 if (messageIndex >= 0) {
                   // Update existing message
@@ -294,6 +310,7 @@ function App() {
                   const textParts = updatedMessages[messageIndex].parts.filter(p => p.type === "text")
                   updatedMessages[messageIndex].content = textParts.map(p => p.text || "").join("\n")
                   
+                  console.log("🔄 Updated existing message, new content:", updatedMessages[messageIndex].content)
                   return updatedMessages
                 } else {
                   // Create new message if it doesn't exist
@@ -314,6 +331,7 @@ function App() {
                     timestamp: new Date(),
                   }
                   
+                  console.log("➕ Created new message:", newMessage.id, newMessage.content)
                   return [...prevMessages, newMessage]
                 }
               })
@@ -321,14 +339,14 @@ function App() {
           } else if (event.type === "message.updated") {
             // Message is complete, stop loading
             const messageInfo = event.properties?.info
-            if (messageInfo && currentSession && messageInfo.sessionID === currentSession.id) {
+            if (messageInfo && currentSessionRef.current && messageInfo.sessionID === currentSessionRef.current.id) {
               console.log("Message updated/completed:", messageInfo)
               setIsLoading(false)
             }
           } else if (event.type === "session.idle") {
             // Session is idle, stop loading
             const sessionInfo = event.properties
-            if (sessionInfo && currentSession && sessionInfo.sessionID === currentSession.id) {
+            if (sessionInfo && currentSessionRef.current && sessionInfo.sessionID === currentSessionRef.current.id) {
               console.log("Session idle:", sessionInfo)
               setIsLoading(false)
             }
