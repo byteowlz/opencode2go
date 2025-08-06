@@ -386,14 +386,18 @@ function App() {
   }, [currentServer])
 
   const handleSessionChange = async (sessionId: string, serverId?: string) => {
+    const targetSession = sessions.find((s) => s.id === sessionId)
     console.log("🔄 Session change requested:", {
       sessionId,
       serverId,
       currentServerId: currentServer?.id,
-      needsServerSwitch: serverId && serverId !== currentServer?.id
+      needsServerSwitch: serverId && serverId !== currentServer?.id,
+      sessionTitle: targetSession?.title,
+      sessionCreated: targetSession?.created,
+      sessionUpdated: targetSession?.updated
     })
     
-    const session = sessions.find((s) => s.id === sessionId)
+    const session = targetSession
     if (session) {
       // If session is from a different server, switch to that server first
       if (serverId && serverId !== currentServer?.id) {
