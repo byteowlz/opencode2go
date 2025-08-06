@@ -38,6 +38,7 @@ function App() {
   const [isServerManagerOpen, setIsServerManagerOpen] = useState(false)
   const [servers, setServers] = useState<OpenCodeServer[]>([])
   const [currentServer, setCurrentServer] = useState<OpenCodeServer | null>(null)
+  const [showAllSessions, setShowAllSessions] = useState(false)
 
   // Message filter state
   const [messageFilters, setMessageFilters] = useState<{
@@ -259,9 +260,17 @@ function App() {
     }
   }, [currentServer])
 
-  const handleSessionChange = async (sessionId: string) => {
+  const handleSessionChange = async (sessionId: string, serverId?: string) => {
     const session = sessions.find((s) => s.id === sessionId)
     if (session) {
+      // If session is from a different server, switch to that server first
+      if (serverId && serverId !== currentServer?.id) {
+        const targetServer = servers.find(s => s.id === serverId)
+        if (targetServer) {
+          await handleServerChange(serverId)
+        }
+      }
+      
       setCurrentSession(session)
       // Load messages for the selected session
       const sessionMessages = await openCodeService.getMessages(sessionId)
@@ -350,10 +359,43 @@ function App() {
   }
 
   const handleRefreshSessions = async () => {
-    if (isConnected) {
+    if (showAllSessions) {
+      await loadAllSessions()
+    } else if (isConnected) {
       const sessionsData = await openCodeService.getSessions()
       setSessions(sessionsData)
     }
+  }
+
+  const handleToggleAllSessions = async () => {
+    const newShowAll = !showAllSessions
+    setShowAllSessions(newShowAll)
+    
+    if (newShowAll) {
+      await loadAllSessions()
+    } else if (currentServer && isConnected) {
+      // Switch back to current server sessions
+      const sessionsData = await openCodeService.getSessions()
+      setSessions(sessionsData)
+    }
+  }
+
+  const loadAllSessions = async () => {
+    const allSessions: OpenCodeSession[] = []
+    
+    for (const server of servers) {
+      try {
+        const serverUrl = serversService.getServerUrl(server)
+        const serverSessions = await openCodeService.getSessionsFromServer(serverUrl, server.id, server.name)
+        allSessions.push(...serverSessions)
+      } catch (error) {
+        console.error(`Failed to load sessions from server ${server.name}:`, error)
+      }
+    }
+    
+    // Sort by updated date, most recent first
+    allSessions.sort((a, b) => b.updated.getTime() - a.updated.getTime())
+    setSessions(allSessions)
   }
 
   const handleAddServer = (serverData: Omit<OpenCodeServer, "id">) => {
@@ -597,6 +639,8 @@ function App() {
         currentServer={currentServer}
         onServerChange={handleServerChange}
         onManageServers={handleManageServers}
+        showAllSessions={showAllSessions}
+        onToggleAllSessions={handleToggleAllSessions}
       />
 
       <ServerManager

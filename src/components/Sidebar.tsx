@@ -11,7 +11,7 @@ interface SidebarProps {
   onClose: () => void
   sessions: OpenCodeSession[]
   currentSession: OpenCodeSession | null
-  onSessionChange: (sessionId: string) => void
+  onSessionChange: (sessionId: string, serverId?: string) => void
   onNewSession: () => void
   onRefreshSessions?: () => void
   providers: OpenCodeProvider[]
@@ -23,6 +23,8 @@ interface SidebarProps {
   currentServer: OpenCodeServer | null
   onServerChange: (serverId: string) => void
   onManageServers?: () => void
+  showAllSessions?: boolean
+  onToggleAllSessions?: () => void
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -41,7 +43,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   servers,
   currentServer,
   onServerChange,
-  onManageServers
+  onManageServers,
+  showAllSessions = false,
+  onToggleAllSessions
 }) => {
   // Create provider/model options for nested dropdown
   const getProviderModelOptions = () => {
@@ -64,6 +68,64 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return {
       provider: selectedProvider,
       model: selectedModel
+    }
+  }
+
+  // Organize sessions into parent-child hierarchy
+  const organizeSessionsHierarchy = (sessions: OpenCodeSession[]) => {
+    const sessionMap = new Map<string, OpenCodeSession>()
+    const parentSessions: OpenCodeSession[] = []
+    const childSessions = new Map<string, OpenCodeSession[]>()
+
+    // First pass: create map and identify parents
+    sessions.forEach(session => {
+      sessionMap.set(session.id, session)
+      if (!session.parentID) {
+        parentSessions.push(session)
+      }
+    })
+
+    // Second pass: organize children under parents
+    sessions.forEach(session => {
+      if (session.parentID) {
+        if (!childSessions.has(session.parentID)) {
+          childSessions.set(session.parentID, [])
+        }
+        childSessions.get(session.parentID)!.push(session)
+      }
+    })
+
+    // Sort children by creation date
+    childSessions.forEach(children => {
+      children.sort((a, b) => b.created.getTime() - a.created.getTime())
+    })
+
+    return { parentSessions, childSessions }
+  }
+
+  const { parentSessions, childSessions } = organizeSessionsHierarchy(sessions)
+
+  // Create server options including "All"
+  const getServerOptions = () => {
+    const options = [
+      { value: "all", label: "All Servers" },
+      ...servers.map(server => ({
+        value: server.id,
+        label: server.name
+      }))
+    ]
+    return options
+  }
+
+  const getCurrentServerValue = () => {
+    return showAllSessions ? "all" : (currentServer?.id || "")
+  }
+
+  const handleServerDropdownChange = (value: string) => {
+    if (value === "all") {
+      onToggleAllSessions?.()
+    } else {
+      onServerChange(value)
     }
   }
 
@@ -92,12 +154,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="sidebar-group">
               <label>Current Server</label>
               <Dropdown
-                options={servers.map(server => ({
-                  value: server.id,
-                  label: server.name
-                }))}
-                value={currentServer?.id || ""}
-                onChange={onServerChange}
+                options={getServerOptions()}
+                value={getCurrentServerValue()}
+                onChange={handleServerDropdownChange}
                 maxWidth="100%"
                 placeholder="Select server"
               />
@@ -141,7 +200,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
             <div className="sidebar-info">
-              <span>Showing sessions from current directory</span>
+              <span>{showAllSessions ? "Showing sessions from all servers" : "Showing sessions from current server"}</span>
             </div>
             
             <div className="sessions-list">
@@ -154,23 +213,52 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </button>
                 </div>
               ) : (
-                sessions.map((session) => (
-                  <button
-                    key={session.id}
-                    className={`session-item ${currentSession?.id === session.id ? 'active' : ''}`}
-                    onClick={() => onSessionChange(session.id)}
-                  >
-                    <div className="session-title">
-                      {session.title.length > 30 ? session.title.substring(0, 30) + "..." : session.title}
+                <>
+                  {parentSessions.map((session) => (
+                    <div key={session.id}>
+                      {/* Parent Session */}
+                      <button
+                        className={`session-item ${currentSession?.id === session.id ? 'active' : ''}`}
+                        onClick={() => onSessionChange(session.id, session.serverId)}
+                      >
+                        <div className="session-title">
+                          {session.title.length > 30 ? session.title.substring(0, 30) + "..." : session.title}
+                        </div>
+                        <div className="session-meta">
+                          <span className="session-id">#{session.id.slice(-6)}</span>
+                          {showAllSessions && session.serverName && (
+                            <span className="session-server">{session.serverName}</span>
+                          )}
+                          <span className="session-time">
+                            {session.updated.toLocaleDateString()}
+                          </span>
+                        </div>
+                      </button>
+                      
+                      {/* Child Sessions */}
+                      {childSessions.get(session.id)?.map((childSession) => (
+                        <button
+                          key={childSession.id}
+                          className={`session-item session-child ${currentSession?.id === childSession.id ? 'active' : ''}`}
+                          onClick={() => onSessionChange(childSession.id, childSession.serverId)}
+                        >
+                          <div className="session-title">
+                            {childSession.title.length > 25 ? childSession.title.substring(0, 25) + "..." : childSession.title}
+                          </div>
+                          <div className="session-meta">
+                            <span className="session-id">#{childSession.id.slice(-6)}</span>
+                            {showAllSessions && childSession.serverName && (
+                              <span className="session-server">{childSession.serverName}</span>
+                            )}
+                            <span className="session-time">
+                              {childSession.updated.toLocaleDateString()}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
                     </div>
-                    <div className="session-meta">
-                      <span className="session-id">#{session.id.slice(-6)}</span>
-                      <span className="session-time">
-                        {session.updated.toLocaleDateString()}
-                      </span>
-                    </div>
-                  </button>
-                ))
+                  ))}
+                </>
               )}
             </div>
           </div>

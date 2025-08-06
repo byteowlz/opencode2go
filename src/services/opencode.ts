@@ -45,6 +45,9 @@ export interface OpenCodeSession {
   title: string
   created: Date
   updated: Date
+  parentID?: string
+  serverId?: string
+  serverName?: string
 }
 
 export interface OpenCodeProvider {
@@ -237,6 +240,7 @@ class OpenCodeService {
         title: session.title,
         created: new Date(session.time.created * 1000),
         updated: new Date(session.time.updated * 1000),
+        parentID: (session as any).parentID,
       }))
       
       console.log("Processed sessions:", processedSessions)
@@ -496,6 +500,43 @@ class OpenCodeService {
     } catch (error: unknown) {
       console.error("Failed to update permissions:", error)
       return false
+    }
+  }
+
+  async getSessionsFromServer(serverUrl: string, serverId: string, serverName: string): Promise<OpenCodeSession[]> {
+    try {
+      console.log("=== FETCHING SESSIONS FROM SERVER ===")
+      console.log("Server URL:", serverUrl)
+      
+      const response = await tauriHttpClient.get(`${serverUrl}/session`)
+      console.log("Sessions response status:", response.status, response.statusText)
+      
+      if (!response.ok) {
+        console.error("Sessions request failed with status:", response.status)
+        return []
+      }
+      
+      const sessions = await response.json()
+      console.log("Raw sessions response:", sessions)
+      
+      const processedSessions = sessions.map((session: any) => ({
+        id: session.id,
+        title: session.title,
+        created: new Date(session.time.created * 1000),
+        updated: new Date(session.time.updated * 1000),
+        parentID: session.parentID,
+        serverId,
+        serverName,
+      }))
+      
+      console.log("Processed sessions:", processedSessions)
+      console.log("=== SESSIONS FETCH SUCCESS ===")
+      
+      return processedSessions
+    } catch (error: unknown) {
+      console.error("=== SESSIONS FETCH FAILED ===")
+      console.error("Failed to get sessions from server:", error)
+      return []
     }
   }
 }
