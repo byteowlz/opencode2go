@@ -150,7 +150,7 @@ class OpenCodeService {
 
   async getProviders(): Promise<{ providers: OpenCodeProvider[]; defaults: Record<string, string> }> {
     try {
-      const response = await this.client.config.providers()
+      const response = await this.client.app.providers()
       return {
         providers: response.providers.map((provider) => ({
           id: provider.id,
@@ -172,22 +172,11 @@ class OpenCodeService {
     try {
       console.log("=== FETCHING MODES ===")
       console.log("Base URL:", this.baseUrl)
-      console.log("Full modes URL:", `${this.baseUrl}/config/modes`)
       
-      const response = await tauriHttpClient.get(`${this.baseUrl}/config/modes`)
-      console.log("Modes response status:", response.status, response.statusText)
-      
-      if (!response.ok) {
-        console.error("Modes request failed with status:", response.status)
-        const errorText = await response.text()
-        console.error("Error response body:", errorText)
-        throw new Error(`Failed to fetch modes: ${response.status} - ${errorText}`)
-      }
-      
-      const modes = await response.json()
+      const modes = await this.client.app.modes()
       console.log("Raw modes response:", modes)
       
-      const processedModes = modes.map((mode: any) => ({
+      const processedModes = modes.map((mode) => ({
         name: mode.name,
         model: mode.model,
         prompt: mode.prompt,
@@ -340,65 +329,28 @@ class OpenCodeService {
 
       const finalMessageID = messageID || `msg_${Date.now()}`
 
-      // Match TUI request format exactly - no tools, no system, minimal parts
-      const requestBody = {
+      // Use the new SDK chat method
+      const chatParams = {
         messageID: finalMessageID,
         providerID,
         modelID,
         mode,
         parts: [
           {
-            type: "text",
+            type: "text" as const,
             text: content,
+            id: `part_${Date.now()}`,
           },
         ],
       }
 
-      const fullUrl = `${this.baseUrl}/session/${sessionId}/message`
-      console.log("Full URL:", fullUrl)
-      console.log("Request body:", JSON.stringify(requestBody, null, 2))
-      console.log("Request headers:", {
-        "Content-Type": "application/json"
-      })
+      console.log("Chat params:", JSON.stringify(chatParams, null, 2))
 
-      // Try native fetch first, fallback to Tauri HTTP client
-      let response: Response
-      try {
-        console.log("🔧 Trying native fetch")
-        response = await fetch(`${this.baseUrl}/session/${sessionId}/message`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
-        })
-        console.log("✅ Native fetch succeeded")
-      } catch (fetchError) {
-        console.log("❌ Native fetch failed, using Tauri HTTP client:", fetchError)
-        response = await tauriHttpClient.post(`${this.baseUrl}/session/${sessionId}/message`, {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
-        })
-      }
+      // Use the SDK's chat method
+      const response = await this.client.session.chat(sessionId, chatParams)
+      console.log("Chat response:", response)
 
-      console.log("Response status:", response.status, response.statusText)
-      console.log("Response headers:", response.headers)
-
-      if (!response.ok) {
-        let errorText = "Unknown error"
-        try {
-          errorText = await response.text()
-        } catch (e) {
-          console.error("Failed to read error response:", e)
-        }
-        console.error("HTTP Error:", response.status, response.statusText, errorText)
-        throw new Error(`HTTP ${response.status}: ${errorText}`)
-      }
-
-      // OpenCode always streams responses through Server-Sent Events
-      // The POST request just initiates the conversation, real response comes via events
+      // The response will come through Server-Sent Events
       console.log("Message sent successfully, response will come via Server-Sent Events")
       
       // Return the messageID so caller can track it

@@ -10,7 +10,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@opencode-ai/sdk": "^0.1.0-alpha.15",
+    "@opencode-ai/sdk": "^0.1.0-alpha.21",
     "@tauri-apps/api": "^2.6.0",
     "@tauri-apps/plugin-http": "^2.5.0",
     "@tauri-apps/plugin-opener": "^2",
