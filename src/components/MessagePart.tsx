@@ -100,24 +100,46 @@ export const MessagePart = memo(({ part }: MessagePartProps) => {
     }
   }
 
-  // Handle tool-invocation parts
-  if (part.type === "tool-invocation") {
+  // Handle reasoning parts (new part type from SDK)
+  if (part.type === "reasoning") {
     return (
-      <div className="message-part tool-invocation-part">
-        <div className="tool-invocation-container">
-          <div className="tool-invocation-header">
-            <span className="tool-invocation-icon">⚙</span>
-            <span className="tool-invocation-text">
-              Invoking {part.invocation?.tool || "tool"}...
-            </span>
+      <div className="message-part reasoning-part">
+        <div className="reasoning-container">
+          <div className="reasoning-header">
+            <span className="reasoning-icon">🤔</span>
+            <span className="reasoning-text">AI Reasoning</span>
           </div>
-          {part.invocation?.input && (
-            <div className="tool-invocation-input">
-              <pre className="tool-invocation-input-content">
-                {JSON.stringify(part.invocation.input, null, 2)}
-              </pre>
-            </div>
-          )}
+          <div className="reasoning-content">
+            <MarkdownContent content={part.text || ""} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Handle patch parts (new part type from SDK)  
+  if (part.type === "patch") {
+    return (
+      <div className="message-part patch-part">
+        <div className="patch-container">
+          <div className="patch-header">
+            <span className="patch-icon">📝</span>
+            <span className="patch-text">Code Patch Applied</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Handle agent parts (new part type from SDK)
+  if (part.type === "agent") {
+    return (
+      <div className="message-part agent-part">
+        <div className="agent-container">
+          <div className="agent-header">
+            <span className="agent-icon">🤖</span>
+            <span className="agent-text">Agent: {part.tool || "Unknown"}</span>
+          </div>
         </div>
       </div>
     )

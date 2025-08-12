@@ -265,6 +265,14 @@ function App() {
             const part = event.properties?.part
             if (part && currentSessionRef.current && part.sessionID === currentSessionRef.current.id) {
               console.log("✅ Processing message part:", part.type, part.messageID, "Content:", part.text?.substring(0, 50))
+            console.log("📊 Part details:", { 
+              type: part.type, 
+              hasText: !!part.text, 
+              textLength: part.text?.length || 0, 
+              tool: part.tool,
+              // Note: step-start and step-finish parts never have text according to OpenCode SDK
+              expectsText: part.type === "text" || part.type === "reasoning"
+            })
               
               setMessages((prevMessages) => {
                 const messageIndex = prevMessages.findIndex(msg => msg.id === part.messageID)
@@ -303,9 +311,17 @@ function App() {
                     })
                   }
                   
-                  // Update content from text parts
-                  const textParts = updatedMessages[messageIndex].parts.filter(p => p.type === "text")
-                  updatedMessages[messageIndex].content = textParts.map(p => p.text || "").join("\n")
+                  // Update content from content-bearing parts (text and reasoning)
+                  const allContentParts = updatedMessages[messageIndex].parts.filter(p => 
+                    p.type === "text" || p.type === "reasoning"
+                  )
+                  if (allContentParts.length > 0) {
+                    // Use all content parts to build the complete content
+                    const textContent = allContentParts.map(p => p.text || "").filter(t => t.trim()).join("\n")
+                    if (textContent) {
+                      updatedMessages[messageIndex].content = textContent
+                    }
+                  }
                   
                   return updatedMessages
                 } else {
@@ -320,17 +336,29 @@ function App() {
                   })
                   
                   // Generate appropriate content based on part type
+                  // According to OpenCode SDK: only "text" and "reasoning" parts have text content
                   let content = ""
-                  if (part.type === "text") {
+                  if (part.type === "text" || part.type === "reasoning") {
                     content = part.text || ""
                   } else if (part.type === "step-start") {
-                    content = `Starting: ${part.text || "Processing..."}`
+                    // step-start parts have no text field in SDK - use placeholder
+                    content = "Processing your request..."
                   } else if (part.type === "step-finish") {
-                    content = `Completed: ${part.text || "Done"}`
+                    // step-finish parts have no text field in SDK - indicates completion
+                    content = "" // Will be replaced by fallback if no text parts follow
                   } else if (part.type === "tool") {
-                    content = `Tool: ${part.tool || "Unknown tool"}`
-                  } else if (part.type === "tool-invocation") {
-                    content = `Invoking: ${part.invocation?.tool || "Unknown tool"}`
+                    content = `Running tool: ${part.tool || "Unknown tool"}`
+                  } else if (part.type === "file") {
+                    content = `File: ${part.filename || "Unknown file"}`
+                  } else if (part.type === "snapshot") {
+                    content = "Snapshot created"
+                  } else if (part.type === "patch") {
+                    content = "Code patch applied"
+                  } else if (part.type === "agent") {
+                    content = `Agent: ${part.tool || "Unknown agent"}`
+                  } else {
+                    // For any other part types, use fallback
+                    content = part.text || `Received ${part.type} part`
                   }
                   
                   const newMessage: OpenCodeMessage = {
@@ -355,12 +383,47 @@ function App() {
                 }
               })
             }
-          } else if (event.type === "message.updated") {
+                  } else if (event.type === "message.updated") {
             // Message is complete, stop loading
             const messageInfo = event.properties?.info
             if (messageInfo && currentSessionRef.current && messageInfo.sessionID === currentSessionRef.current.id) {
               console.log("Message updated/completed:", messageInfo)
               setIsLoading(false)
+              
+              // Check if the completed message only has step parts and no text content
+              // This is a known issue where follow-up messages don't get proper text responses
+              setMessages((prevMessages) => {
+                const messageIndex = prevMessages.findIndex(msg => msg.id === messageInfo.id)
+                if (messageIndex >= 0) {
+                  const message = prevMessages[messageIndex]
+                  // According to OpenCode SDK: only "text" and "reasoning" parts contain actual response content
+                  const hasContentParts = message.parts.some(p => 
+                    (p.type === "text" || p.type === "reasoning") && p.text?.trim()
+                  )
+                  const hasStepParts = message.parts.some(p => p.type === "step-start" || p.type === "step-finish")
+                  const hasToolParts = message.parts.some(p => p.type === "tool")
+                  
+                  // If assistant message only has step/tool parts without actual content parts,
+                  // the server failed to send the response content - add helpful message
+                  if ((hasStepParts || hasToolParts) && !hasContentParts && message.role === "assistant") {
+                    const updatedMessages = [...prevMessages]
+                    const fallbackContent = "I'm processing your request, but there seems to be a communication issue. The response content wasn't received properly. Please try your message again, or check if the OpenCode server is running correctly."
+                    
+                    updatedMessages[messageIndex] = {
+                      ...message,
+                      content: fallbackContent,
+                      parts: [...message.parts, {
+                        id: `fallback_${Date.now()}`,
+                        type: "text",
+                        text: fallbackContent
+                      }]
+                    }
+                    console.log("🔧 Added fallback content for incomplete message (only step/tool parts):", message.id, "Parts:", message.parts.map(p => p.type))
+                    return updatedMessages
+                  }
+                }
+                return prevMessages
+              })
             }
           } else if (event.type === "session.idle") {
             // Session is idle, stop loading

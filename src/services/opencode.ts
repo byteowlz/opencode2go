@@ -6,8 +6,8 @@ import { listen } from "@tauri-apps/api/event"
 
 export interface OpenCodePart {
   id: string
-  type: "text" | "tool" | "tool-invocation" | "step-start" | "step-finish" | "file" | "snapshot"
-  text?: string
+  type: "text" | "reasoning" | "file" | "tool" | "step-start" | "step-finish" | "snapshot" | "patch" | "agent"
+  text?: string // Only available on text/reasoning parts
   tool?: string
   filename?: string
   snapshot?: {
@@ -29,6 +29,22 @@ export interface OpenCodePart {
     }
     input?: any
     output?: any
+  }
+  // Additional fields from OpenCode SDK
+  synthetic?: boolean
+  time?: {
+    start: number
+    end?: number
+  }
+  cost?: number
+  tokens?: {
+    input: number
+    output: number
+    reasoning: number
+    cache: {
+      read: number
+      write: number
+    }
   }
 }
 
