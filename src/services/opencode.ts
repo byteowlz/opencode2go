@@ -89,6 +89,20 @@ export interface OpenCodeMode {
   tools: Record<string, boolean>
 }
 
+export interface ToastNotification {
+  title?: string
+  message: string
+  variant: "info" | "success" | "warning" | "error"
+}
+
+export interface OpenCodeAgent {
+  id: string
+  name: string
+  description?: string
+  type: string
+  tools?: string[]
+}
+
 class OpenCodeService {
   private client: Opencode
   private baseUrl: string
@@ -262,6 +276,49 @@ class OpenCodeService {
         message: errorObj?.message,
         status: errorObj?.status,
         baseUrl: this.baseUrl,
+        stack: errorObj?.stack,
+      })
+      return []
+    }
+  }
+
+  async getSessionChildren(sessionId: string): Promise<OpenCodeSession[]> {
+    try {
+      console.log("=== FETCHING SESSION CHILDREN ===")
+      console.log("Base URL:", this.baseUrl)
+      console.log("Session ID:", sessionId)
+      
+      // Use HTTP client to call the new /session/:id/children endpoint
+      const response = await tauriHttpClient.get(`${this.baseUrl}/session/${sessionId}/children`)
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      const children = await response.json()
+      
+      console.log("Raw session children response:", children)
+      console.log("Number of children found:", children.length)
+      
+      const processedChildren = children.map((session: any) => ({
+        id: session.id,
+        title: session.title,
+        created: new Date(session.time.created * 1000),
+        updated: new Date(session.time.updated * 1000),
+        parentID: session.parentID || sessionId,
+      }))
+      
+      console.log("Processed session children:", processedChildren)
+      console.log("=== SESSION CHILDREN FETCH SUCCESS ===")
+      
+      return processedChildren
+    } catch (error: unknown) {
+      console.error("=== SESSION CHILDREN FETCH FAILED ===")
+      console.error("Failed to get session children:", error)
+      const errorObj = error as any
+      console.error("Error details:", {
+        message: errorObj?.message,
+        status: errorObj?.status,
+        baseUrl: this.baseUrl,
+        sessionId,
         stack: errorObj?.stack,
       })
       return []
@@ -488,6 +545,104 @@ class OpenCodeService {
     } catch (error: unknown) {
       console.error("Failed to update permissions:", error)
       return false
+    }
+  }
+
+  async showToast(notification: ToastNotification): Promise<boolean> {
+    try {
+      console.log("=== SHOWING TOAST NOTIFICATION ===")
+      console.log("Base URL:", this.baseUrl)
+      console.log("Notification:", notification)
+      
+      // Use HTTP client to call the new /tui/show-toast endpoint
+      const response = await tauriHttpClient.post(`${this.baseUrl}/tui/show-toast`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: notification.title,
+          message: notification.message,
+          variant: notification.variant,
+        }),
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      
+      const result = await response.json()
+      const success = result === true
+      
+      console.log("Toast notification result:", success)
+      console.log("=== TOAST NOTIFICATION SUCCESS ===")
+      
+      return success
+    } catch (error: unknown) {
+      console.error("=== TOAST NOTIFICATION FAILED ===")
+      console.error("Failed to show toast notification:", error)
+      const errorObj = error as any
+      console.error("Error details:", {
+        message: errorObj?.message,
+        status: errorObj?.status,
+        baseUrl: this.baseUrl,
+        notification,
+        stack: errorObj?.stack,
+      })
+      return false
+    }
+  }
+
+  async getAgents(): Promise<OpenCodeAgent[]> {
+    try {
+      console.log("=== FETCHING AGENTS ===")
+      console.log("Base URL:", this.baseUrl)
+      
+      // Use the new /agent endpoint instead of environment variables
+      const response = await tauriHttpClient.get(`${this.baseUrl}/agent`)
+      console.log("Agents response status:", response.status, response.statusText)
+      
+      if (!response.ok) {
+        console.error("Agents request failed with status:", response.status)
+        return []
+      }
+      
+      const agents = await response.json()
+      console.log("Raw agents response:", agents)
+      
+      // Handle different response formats
+      let agentList: any[] = []
+      if (Array.isArray(agents)) {
+        agentList = agents
+      } else if (agents.agents && Array.isArray(agents.agents)) {
+        agentList = agents.agents
+      } else if (typeof agents === 'object') {
+        // Convert object to array if needed
+        agentList = Object.values(agents)
+      }
+      
+      const processedAgents = agentList.map((agent: any) => ({
+        id: agent.id || agent.name || `agent_${Date.now()}`,
+        name: agent.name || agent.id || 'Unknown Agent',
+        description: agent.description,
+        type: agent.type || 'general',
+        tools: agent.tools || [],
+      }))
+      
+      console.log("Processed agents:", processedAgents)
+      console.log("=== AGENTS FETCH SUCCESS ===")
+      
+      return processedAgents
+    } catch (error: unknown) {
+      console.error("=== AGENTS FETCH FAILED ===")
+      console.error("Failed to get agents:", error)
+      const errorObj = error as any
+      console.error("Error details:", {
+        message: errorObj?.message,
+        status: errorObj?.status,
+        baseUrl: this.baseUrl,
+        stack: errorObj?.stack,
+      })
+      return []
     }
   }
 

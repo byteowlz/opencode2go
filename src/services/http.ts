@@ -64,6 +64,82 @@ export class TauriHttpClient {
     })
   }
 
+  async patch(url: string, options: RequestInit = {}): Promise<Response> {
+    const headers: Record<string, string> = {}
+
+    if (options.headers) {
+      if (options.headers instanceof Headers) {
+        options.headers.forEach((value, key) => {
+          headers[key] = value
+        })
+      } else if (Array.isArray(options.headers)) {
+        options.headers.forEach(([key, value]) => {
+          headers[key] = value
+        })
+      } else {
+        Object.assign(headers, options.headers)
+      }
+    }
+
+    let body: any = {}
+    if (options.body) {
+      if (typeof options.body === "string") {
+        try {
+          body = JSON.parse(options.body)
+        } catch {
+          body = { data: options.body }
+        }
+      } else {
+        body = options.body
+      }
+    }
+
+    const response = await invoke<HttpResponse>("http_patch", {
+      url,
+      body,
+      headers: Object.keys(headers).length > 0 ? headers : null,
+    })
+
+    return new Response(JSON.stringify(response.data), {
+      status: response.status,
+      statusText: response.ok ? "OK" : "Error",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+  }
+
+  async delete(url: string, options: RequestInit = {}): Promise<Response> {
+    const headers: Record<string, string> = {}
+
+    if (options.headers) {
+      if (options.headers instanceof Headers) {
+        options.headers.forEach((value, key) => {
+          headers[key] = value
+        })
+      } else if (Array.isArray(options.headers)) {
+        options.headers.forEach(([key, value]) => {
+          headers[key] = value
+        })
+      } else {
+        Object.assign(headers, options.headers)
+      }
+    }
+
+    const response = await invoke<HttpResponse>("http_delete", {
+      url,
+      headers: Object.keys(headers).length > 0 ? headers : null,
+    })
+
+    return new Response(JSON.stringify(response.data), {
+      status: response.status,
+      statusText: response.ok ? "OK" : "Error",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+  }
+
   async fetch(input: string | URL | Request, options?: RequestInit): Promise<Response> {
     let url: string
     let requestOptions = options || {}
@@ -86,6 +162,10 @@ export class TauriHttpClient {
       return this.get(url)
     } else if (method === "POST") {
       return this.post(url, requestOptions)
+    } else if (method === "PATCH") {
+      return this.patch(url, requestOptions)
+    } else if (method === "DELETE") {
+      return this.delete(url, requestOptions)
     } else {
       throw new Error(`HTTP method ${method} not supported`)
     }

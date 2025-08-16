@@ -60,6 +60,52 @@ async fn http_post(url: String, body: serde_json::Value, headers: Option<HashMap
 }
 
 #[tauri::command]
+async fn http_patch(url: String, body: serde_json::Value, headers: Option<HashMap<String, String>>) -> Result<HttpResponse, String> {
+    let client = reqwest::Client::new();
+    let mut request = client.patch(&url);
+    
+    if let Some(headers_map) = headers {
+        for (key, value) in headers_map {
+            request = request.header(&key, &value);
+        }
+    }
+    
+    let response = request.json(&body).send().await.map_err(|e| e.to_string())?;
+    
+    let status = response.status().as_u16();
+    let ok = response.status().is_success();
+    let text = response.text().await.map_err(|e| e.to_string())?;
+    
+    let data: serde_json::Value = serde_json::from_str(&text)
+        .unwrap_or_else(|_| serde_json::Value::String(text));
+    
+    Ok(HttpResponse { status, data, ok })
+}
+
+#[tauri::command]
+async fn http_delete(url: String, headers: Option<HashMap<String, String>>) -> Result<HttpResponse, String> {
+    let client = reqwest::Client::new();
+    let mut request = client.delete(&url);
+    
+    if let Some(headers_map) = headers {
+        for (key, value) in headers_map {
+            request = request.header(&key, &value);
+        }
+    }
+    
+    let response = request.send().await.map_err(|e| e.to_string())?;
+    
+    let status = response.status().as_u16();
+    let ok = response.status().is_success();
+    let text = response.text().await.map_err(|e| e.to_string())?;
+    
+    let data: serde_json::Value = serde_json::from_str(&text)
+        .unwrap_or_else(|_| serde_json::Value::String(text));
+    
+    Ok(HttpResponse { status, data, ok })
+}
+
+#[tauri::command]
 async fn discover_servers() -> Result<Vec<DiscoveredServer>, String> {
     let mut discovered = Vec::new();
     
@@ -216,7 +262,7 @@ fn greet(name: &str) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, http_get, http_post, discover_servers, start_sse_stream])
+        .invoke_handler(tauri::generate_handler![greet, http_get, http_post, http_patch, http_delete, discover_servers, start_sse_stream])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
