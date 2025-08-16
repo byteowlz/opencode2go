@@ -25,6 +25,7 @@ function App() {
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const currentSessionRef = useRef<OpenCodeSession | null>(null)
   const sentMessageIdsRef = useRef<Set<string>>(new Set())
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [showScrollButton, setShowScrollButton] = useState(false)
   const [currentSession, setCurrentSession] = useState<OpenCodeSession | null>(null)
   
@@ -229,9 +230,16 @@ function App() {
           }
         }
 
-        // Subscribe to events for automatic session updates and message streaming
+        // Subscribe to events for automatic session updates and message streaming  
+        console.log("🔗 Setting up SSE subscription...")
         const unsubscribe = openCodeService.subscribeToEvents((event) => {
           console.log("🔔 Event received:", event.type, event)
+          console.log("🔍 Loading state:", isLoading, "Current session:", currentSessionRef.current?.id)
+          
+          // Add specific debugging for completion events
+          if (event.type === "message.updated" || event.type === "session.idle") {
+            console.log("🏁 Completion event received, should stop loading")
+          }
           
           if (event.type === "session.updated") {
             // Update the session in our list when it gets updated (e.g., title change)
@@ -265,14 +273,30 @@ function App() {
             const part = event.properties?.part
             if (part && currentSessionRef.current && part.sessionID === currentSessionRef.current.id) {
               console.log("✅ Processing message part:", part.type, part.messageID, "Content:", part.text?.substring(0, 50))
-            console.log("📊 Part details:", { 
-              type: part.type, 
-              hasText: !!part.text, 
-              textLength: part.text?.length || 0, 
-              tool: part.tool,
-              // Note: step-start and step-finish parts never have text according to OpenCode SDK
-              expectsText: part.type === "text" || part.type === "reasoning"
-            })
+              console.log("📊 Part details:", { 
+                type: part.type, 
+                hasText: !!part.text, 
+                textLength: part.text?.length || 0, 
+                tool: part.tool,
+                // Note: step-start and step-finish parts never have text according to OpenCode SDK
+                expectsText: part.type === "text" || part.type === "reasoning"
+              })
+              
+              // Failsafe: If we receive a step-finish part, that means processing is likely complete
+              if (part.type === "step-finish") {
+                console.log("🏁 Received step-finish part - processing may be complete")
+                // Set a short delay to stop loading if no completion event comes
+                setTimeout(() => {
+                  if (isLoading) {
+                    console.log("⚠️ No completion event received after step-finish, stopping loading")
+                    setIsLoading(false)
+                    if (loadingTimeoutRef.current) {
+                      clearTimeout(loadingTimeoutRef.current)
+                      loadingTimeoutRef.current = null
+                    }
+                  }
+                }, 2000) // Wait 2 seconds for completion event
+              }
               
               setMessages((prevMessages) => {
                 const messageIndex = prevMessages.findIndex(msg => msg.id === part.messageID)
@@ -386,9 +410,20 @@ function App() {
                   } else if (event.type === "message.updated") {
             // Message is complete, stop loading
             const messageInfo = event.properties?.info
+            console.log("📝 message.updated event details:", {
+              hasInfo: !!messageInfo,
+              sessionID: messageInfo?.sessionID,
+              currentSession: currentSessionRef.current?.id,
+              matches: messageInfo && currentSessionRef.current && messageInfo.sessionID === currentSessionRef.current.id
+            })
             if (messageInfo && currentSessionRef.current && messageInfo.sessionID === currentSessionRef.current.id) {
-              console.log("Message updated/completed:", messageInfo)
+              console.log("✅ Message updated/completed - stopping loading:", messageInfo)
               setIsLoading(false)
+              // Clear any pending timeout
+              if (loadingTimeoutRef.current) {
+                clearTimeout(loadingTimeoutRef.current)
+                loadingTimeoutRef.current = null
+              }
               
               // Check if the completed message only has step parts and no text content
               // This is a known issue where follow-up messages don't get proper text responses
@@ -428,9 +463,20 @@ function App() {
           } else if (event.type === "session.idle") {
             // Session is idle, stop loading
             const sessionInfo = event.properties
+            console.log("💤 session.idle event details:", {
+              hasProperties: !!sessionInfo,
+              sessionID: sessionInfo?.sessionID,
+              currentSession: currentSessionRef.current?.id,
+              matches: sessionInfo && currentSessionRef.current && sessionInfo.sessionID === currentSessionRef.current.id
+            })
             if (sessionInfo && currentSessionRef.current && sessionInfo.sessionID === currentSessionRef.current.id) {
-              console.log("Session idle:", sessionInfo)
+              console.log("✅ Session idle - stopping loading:", sessionInfo)
               setIsLoading(false)
+              // Clear any pending timeout
+              if (loadingTimeoutRef.current) {
+                clearTimeout(loadingTimeoutRef.current)
+                loadingTimeoutRef.current = null
+              }
             }
           }
         })
@@ -653,6 +699,13 @@ function App() {
     setInput("")
     setIsLoading(true)
 
+    // Add safety timeout to prevent infinite loading state
+    loadingTimeoutRef.current = setTimeout(() => {
+      console.warn("⚠️ Message response timeout - stopping loading state")
+      setIsLoading(false)
+      loadingTimeoutRef.current = null
+    }, 30000) // 30 second timeout
+
     try {
       // Generate message ID before sending (same logic as in opencode service)
       const messageId = `msg_${Date.now()}`
@@ -688,6 +741,11 @@ function App() {
       }
       setMessages((prev) => [...prev, errorMessage])
       setIsLoading(false)
+      // Clear any pending timeout
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current)
+        loadingTimeoutRef.current = null
+      }
     }
   }
 
