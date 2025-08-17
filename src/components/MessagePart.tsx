@@ -19,15 +19,25 @@ interface MessagePartProps {
 }
 
 const MarkdownContent = memo(({ content }: { content: string }) => {
-  // Safety check: ensure content is a string
+  // Comprehensive safety checks
   if (typeof content !== 'string') {
     console.warn('MarkdownContent received non-string content:', typeof content, content)
-    return <div>Invalid content type: {typeof content}</div>
+    return <div className="error-content">Invalid content type: {typeof content}</div>
   }
   
-  if (!content) {
+  if (!content || content.trim() === '') {
     return <div></div>
   }
+  
+  // Additional safety: ensure content doesn't contain objects or arrays
+  let safeContent: string
+  try {
+    safeContent = String(content)
+  } catch (error) {
+    console.error('Failed to convert content to string:', error)
+    return <div className="error-content">Failed to render content</div>
+  }
+  
   const markdownComponents = {
     code({ className, children, ...props }: any) {
       const match = /language-(\w+)/.exec(className || '')
@@ -69,7 +79,7 @@ const MarkdownContent = memo(({ content }: { content: string }) => {
       components={markdownComponents}
       remarkPlugins={[remarkGfm]}
     >
-      {content}
+      {safeContent}
     </ReactMarkdown>
   )
 })
@@ -77,9 +87,10 @@ const MarkdownContent = memo(({ content }: { content: string }) => {
 export const MessagePart = memo(({ part }: MessagePartProps) => {
   // Handle text parts
   if (part.type === "text" && part.text) {
+    const textContent = typeof part.text === 'string' ? part.text : String(part.text || "")
     return (
       <div className="message-part text-part">
-        <MarkdownContent content={part.text || ""} />
+        <MarkdownContent content={textContent} />
       </div>
     )
   }
@@ -119,7 +130,7 @@ export const MessagePart = memo(({ part }: MessagePartProps) => {
             <span className="reasoning-text">AI Reasoning</span>
           </div>
           <div className="reasoning-content">
-            <MarkdownContent content={part.text || ""} />
+            <MarkdownContent content={typeof part.text === 'string' ? part.text : String(part.text || "")} />
           </div>
         </div>
       </div>
