@@ -285,7 +285,7 @@ function App() {
               // Failsafe: If we receive a step-finish part, that means processing is likely complete
               if (part.type === "step-finish") {
                 console.log("🏁 Received step-finish part - processing may be complete")
-                // Set a short delay to stop loading if no completion event comes
+                // Set a shorter delay to stop loading if no completion event comes
                 setTimeout(() => {
                   if (isLoading) {
                     console.log("⚠️ No completion event received after step-finish, stopping loading")
@@ -295,7 +295,23 @@ function App() {
                       loadingTimeoutRef.current = null
                     }
                   }
-                }, 2000) // Wait 2 seconds for completion event
+                }, 1000) // Reduced to 1 second for faster recovery
+              }
+              
+              // Additional failsafe: If we receive a text or reasoning part from assistant, extend timeout
+              if ((part.type === "text" || part.type === "reasoning") && part.text) {
+                console.log("📝 Received content part, extending timeout")
+                // Clear existing timeout and set a new one
+                if (loadingTimeoutRef.current) {
+                  clearTimeout(loadingTimeoutRef.current)
+                }
+                loadingTimeoutRef.current = setTimeout(() => {
+                  if (isLoading) {
+                    console.log("⏰ Content timeout - stopping loading")
+                    setIsLoading(false)
+                    loadingTimeoutRef.current = null
+                  }
+                }, 5000) // 5 seconds after last content
               }
               
               setMessages((prevMessages) => {
@@ -442,7 +458,7 @@ function App() {
                   // the server failed to send the response content - add helpful message
                   if ((hasStepParts || hasToolParts) && !hasContentParts && message.role === "assistant") {
                     const updatedMessages = [...prevMessages]
-                    const fallbackContent = "I'm processing your request, but there seems to be a communication issue. The response content wasn't received properly. Please try your message again, or check if the OpenCode server is running correctly."
+                    const fallbackContent = "Response content is still being processed. If this persists, the server may be experiencing delays."
                     
                     updatedMessages[messageIndex] = {
                       ...message,

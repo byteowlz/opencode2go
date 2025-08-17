@@ -66,15 +66,6 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
     setTempSettings(resetSettings)
   }
 
-  const handleClearAppState = () => {
-    if (confirm("🧹 Clear all app state?\n\nThis will:\n- Clear all saved servers\n- Clear all settings\n- Reset to defaults\n- Force page reload\n\nThis action cannot be undone.")) {
-      // Clear all localStorage
-      localStorage.clear()
-      
-      // Force page reload to start fresh
-      window.location.reload()
-    }
-  }
 
   const updatePermissionSettings = (field: keyof AppSettings["permissions"], value: Permission) => {
     const newTempSettings = {
