@@ -19,6 +19,15 @@ interface MessagePartProps {
 }
 
 const MarkdownContent = memo(({ content }: { content: string }) => {
+  // Safety check: ensure content is a string
+  if (typeof content !== 'string') {
+    console.warn('MarkdownContent received non-string content:', typeof content, content)
+    return <div>Invalid content type: {typeof content}</div>
+  }
+  
+  if (!content) {
+    return <div></div>
+  }
   const markdownComponents = {
     code({ className, children, ...props }: any) {
       const match = /language-(\w+)/.exec(className || '')
@@ -70,7 +79,7 @@ export const MessagePart = memo(({ part }: MessagePartProps) => {
   if (part.type === "text" && part.text) {
     return (
       <div className="message-part text-part">
-        <MarkdownContent content={part.text} />
+        <MarkdownContent content={part.text || ""} />
       </div>
     )
   }
