@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core"
+// import { invoke } from "@tauri-apps/api/core"
 import { OpenCodeServer } from "../types/servers"
 
 export interface DiscoveredServer {
@@ -15,6 +15,11 @@ class DiscoveryService {
   private listeners: Array<(servers: DiscoveredServer[]) => void> = []
 
   async discoverServers(): Promise<DiscoveredServer[]> {
+    console.log("🚫 Server discovery temporarily disabled to test localhost")
+    return []
+    
+    // Original discovery code commented out to test localhost only:
+    /*
     if (this.isDiscovering) {
       return this.discoveredServers
     }
@@ -22,7 +27,8 @@ class DiscoveryService {
     this.isDiscovering = true
     
     try {
-      console.log("🔍 Starting server discovery...")
+      console.log("🚫 Server discovery temporarily disabled"); return [];
+      // console.log("🔍 Starting server discovery...")
       const discovered = await invoke<DiscoveredServer[]>("discover_servers")
       
       this.discoveredServers = discovered
@@ -38,6 +44,7 @@ class DiscoveryService {
     } finally {
       this.isDiscovering = false
     }
+    */
   }
 
   convertToOpenCodeServers(discovered: DiscoveredServer[]): OpenCodeServer[] {
