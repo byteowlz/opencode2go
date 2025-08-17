@@ -1,9 +1,8 @@
 import { memo } from "react"
-// Temporarily disabled to fix split() error
-// // import ReactMarkdown from "react-markdown"
-// import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-// import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-// // import remarkGfm from 'remark-gfm'
+import ReactMarkdown from "react-markdown"
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import remarkGfm from 'remark-gfm'
 import { OpenCodePart } from "../services/opencode"
 import { 
   BashTool, 
@@ -39,8 +38,41 @@ const MarkdownContent = memo(({ content }: { content: string }) => {
     return <div className="error-content">Failed to render content</div>
   }
   
-  // Temporarily disabled markdown components
-  // const markdownComponents = { ... }
+  const markdownComponents = {
+    code({ className, children, ...props }: any) {
+      const match = /language-(\w+)/.exec(className || '')
+      const language = match ? match[1] : 'text'
+      const childrenStr = String(children)
+      
+      // Check if it's a code block (not inline)
+      if (!props.inline && (match || childrenStr.includes('\n'))) {
+        return (
+          <SyntaxHighlighter
+            style={oneDark as any}
+            language={language}
+            PreTag="div"
+            customStyle={{
+              margin: '2px 0',
+              padding: '8px',
+              fontSize: '0.9em',
+              lineHeight: '1.4',
+              backgroundColor: 'var(--color-bg-element)',
+              border: '1px solid var(--color-border)'
+            }}
+          >
+            {childrenStr.replace(/\n$/, '')}
+          </SyntaxHighlighter>
+        )
+      }
+      
+      // Inline code
+      return (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      )
+    }
+  }
 
   // Temporarily use plain text to isolate ReactMarkdown issue
   return (

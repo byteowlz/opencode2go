@@ -352,7 +352,7 @@ class OpenCodeService {
         const parts: OpenCodePart[] = message.parts.map((part: any) => ({
           id: part.id,
           type: part.type,
-          text: part.text,
+          text: typeof part.text === 'string' ? part.text : (part.text ? String(part.text) : undefined),
           tool: part.tool,
           filename: part.filename,
           snapshot: part.snapshot,
@@ -362,7 +362,10 @@ class OpenCodeService {
 
         // Create content from text parts for backward compatibility
         const textParts = message.parts.filter((part: any) => part.type === "text")
-        const content = textParts.map((part: any) => part.text || "").join("\n")
+        const content = textParts.map((part: any) => {
+          const text = part.text
+          return typeof text === 'string' ? text : (text ? String(text) : "")
+        }).join("\n")
 
         result.push({
           id: messageInfo.id,
