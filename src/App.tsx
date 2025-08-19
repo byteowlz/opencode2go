@@ -852,7 +852,7 @@ function App() {
             <div className="message assistant">
               <div className="message-header">
                 <span className="message-role assistant">assistant</span>
-                <span className="text-muted">thinking...</span>
+                <span className="text-muted">generating response...</span>
               </div>
               <div className="message-content">
                 <BrailleSpinner />
@@ -897,6 +897,14 @@ function App() {
           <div className="status-item">
             <div className={`status-indicator ${isConnected ? "connected" : "disconnected"}`}></div>
             <span>{isConnected ? "Connected" : "Disconnected"}</span>
+          </div>
+          <div className="status-item">
+            <div className={`status-indicator ${isLoading ? "processing" : "idle"}`}></div>
+            <span>{isLoading ? "Processing..." : "Idle"}</span>
+          </div>
+          <div className="status-item">
+            <div className={`status-indicator ${isLoading ? "processing" : "idle"}`}></div>
+            <span>{isLoading ? "Processing..." : "Idle"}</span>
           </div>
         </div>
         <div className="status-right">

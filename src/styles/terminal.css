@@ -1140,6 +1140,18 @@ body {
 .status-indicator.connecting {
   background-color: var(--color-warning);
 }
+.status-indicator.processing {
+  background-color: var(--color-primary);
+  animation: pulse 2s ease-in-out infinite;
+}
+.status-indicator.idle {
+  background-color: var(--color-text-muted);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
 
 /* New session button */
 .new-session-btn {
