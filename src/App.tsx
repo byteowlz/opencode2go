@@ -10,7 +10,7 @@ import { CyclingButton } from "./components/CyclingButton"
 import { BrailleSpinner } from "./components/BrailleSpinner"
 
 import { OpenCodeServer } from "./types/servers"
-import { Wrench, Menu, ChevronDown } from "lucide-react"
+import { Menu, ChevronDown, Plus } from "lucide-react"
 import { settingsService } from "./services/settings"
 import { serversService } from "./services/servers"
 import { getTheme } from "./themes"
@@ -796,13 +796,14 @@ function App() {
           <div className="terminal-title"><Logo /></div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <button className="new-chat-button" onClick={createNewSession} title="New Chat">
+            <Plus size={16} />
+            <span>New Chat</span>
+          </button>
           <MessageFilter
             filters={messageFilters}
             onFiltersChange={setMessageFilters}
           />
-          <button className="settings-button-header" onClick={() => setIsSettingsOpen(true)} title="Settings">
-            <Wrench size={16} />
-          </button>
         </div>
       </div>
 

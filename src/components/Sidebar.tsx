@@ -25,6 +25,7 @@ interface SidebarProps {
   onManageServers?: () => void
   showAllSessions?: boolean
   onToggleAllSessions?: () => void
+  onOpenSettings?: () => void
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -45,7 +46,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onServerChange,
   onManageServers,
   showAllSessions = false,
-  onToggleAllSessions
+  onToggleAllSessions,
+  onOpenSettings
 }) => {
   // Create provider/model options for nested dropdown
   const getProviderModelOptions = () => {

@@ -1153,6 +1153,54 @@ body {
   50% { opacity: 0.5; }
 }
 
+/* New chat button in header */
+.new-chat-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.new-chat-button:hover {
+  background: var(--color-primary);
+  opacity: 0.9;
+}
+
+.new-chat-button:active {
+  transform: translateY(1px);
+}
+
+/* Sidebar settings button */
+.sidebar-settings-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3);
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  transition: all 0.2s ease;
+}
+
+.sidebar-settings-button:hover {
+  background: var(--color-bg-element);
+  border-color: var(--color-border-active);
+}
+
 /* New session button */
 .new-session-btn {
   margin-left: 0.5rem;
