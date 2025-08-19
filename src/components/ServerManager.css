@@ -35,6 +35,127 @@
   background-color: var(--color-bg-element);
 }
 
+.server-manager-tabs {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.tab-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.tab-button.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-bg);
+}
+
+.tab-button:not(.active):hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+/* Settings styles - reusing from terminal.css */
+.server-manager-modal .settings-section {
+  margin-bottom: var(--space-6);
+}
+
+.server-manager-modal .settings-section:last-child {
+  margin-bottom: 0;
+}
+
+.server-manager-modal .settings-section h3 {
+  margin: 0 0 var(--space-4) 0;
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.server-manager-modal .settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.server-manager-modal .settings-group label {
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.server-manager-modal .settings-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.server-manager-modal .settings-actions-left,
+.server-manager-modal .settings-actions-right {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.server-manager-modal .settings-button {
+  padding: var(--space-2) var(--space-4);
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.server-manager-modal .settings-button-primary {
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  color: var(--color-bg);
+}
+
+.server-manager-modal .settings-button-primary:hover {
+  opacity: 0.8;
+}
+
+.server-manager-modal .settings-button-secondary {
+  background: var(--color-bg-element);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.server-manager-modal .settings-button-secondary:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-primary);
+}
+
+.server-manager-modal .settings-button-danger {
+  background: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  color: var(--color-bg);
+}
+
+.server-manager-modal .settings-button-danger:hover {
+  opacity: 0.8;
+}
+
 .server-manager-header h2 {
   margin: 0;
   color: var(--color-text);
