@@ -264,6 +264,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
             </div>
           </div>
+          
+          {/* Settings Button */}
+          {onOpenSettings && (
+            <div className="sidebar-section" style={{ marginTop: "auto", padding: "1rem" }}>
+              <button
+                className="sidebar-settings-button"
+                onClick={onOpenSettings}
+                title="Settings"
+              >
+                <Settings size={16} />
+                <span>Settings</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>

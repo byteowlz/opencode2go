@@ -944,6 +944,7 @@ function App() {
         onManageServers={handleManageServers}
         showAllSessions={showAllSessions}
         onToggleAllSessions={handleToggleAllSessions}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
       <ServerManager
