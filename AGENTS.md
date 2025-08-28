@@ -26,6 +26,7 @@
 
 ## IMPORTANT Rules
 
+- If you ever put emojis in my code, your ass is getting fired!!! NEVER USE EMOJIS!!!!
 - Keep functions focused - avoid unnecessary composition unless reusable
 - AVOID destructuring unless it improves readability
 - AVOID `else` statements where possible

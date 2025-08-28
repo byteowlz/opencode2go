@@ -424,21 +424,29 @@ function App() {
               })
             }
                   } else if (event.type === "message.updated") {
-            // Message is complete, stop loading
+            // Message is complete, but only stop loading for ASSISTANT messages
             const messageInfo = event.properties?.info
             console.log("📝 message.updated event details:", {
               hasInfo: !!messageInfo,
               sessionID: messageInfo?.sessionID,
               currentSession: currentSessionRef.current?.id,
+              role: messageInfo?.role,
               matches: messageInfo && currentSessionRef.current && messageInfo.sessionID === currentSessionRef.current.id
             })
             if (messageInfo && currentSessionRef.current && messageInfo.sessionID === currentSessionRef.current.id) {
-              console.log("✅ Message updated/completed - stopping loading:", messageInfo)
-              setIsLoading(false)
-              // Clear any pending timeout
-              if (loadingTimeoutRef.current) {
-                clearTimeout(loadingTimeoutRef.current)
-                loadingTimeoutRef.current = null
+              // Only stop loading if this is an ASSISTANT message (not a user message)
+              if (messageInfo.role === "assistant") {
+                console.log("✅ Assistant message completed - stopping loading:", messageInfo)
+                setIsLoading(false)
+                // Clear any pending timeout
+                if (loadingTimeoutRef.current) {
+                  clearTimeout(loadingTimeoutRef.current)
+                  loadingTimeoutRef.current = null
+                }
+
+                // Real assistant response received
+              } else {
+                console.log("📤 User message updated - keeping loading state for assistant response:", messageInfo)
               }
               
               // Check if the completed message only has step parts and no text content
@@ -493,6 +501,8 @@ function App() {
                 clearTimeout(loadingTimeoutRef.current)
                 loadingTimeoutRef.current = null
               }
+
+              // Session is now idle
             }
           }
         })
@@ -722,10 +732,12 @@ function App() {
       loadingTimeoutRef.current = null
     }, 30000) // 30 second timeout
 
+    // Loading state will be handled by the BrailleSpinner below
+
     try {
       // Generate message ID before sending (same logic as in opencode service)
       const messageId = `msg_${Date.now()}`
-      
+
       // Track this message ID as a user message BEFORE sending
       console.log("📤 Pre-tracking sent message ID:", messageId)
       setSentMessageIds(prev => new Set([...prev, messageId]))
@@ -854,17 +866,17 @@ function App() {
               </div>
             ))}
 
-          {isLoading && (
-            <div className="message assistant">
-              <div className="message-header">
-                <span className="message-role assistant">assistant</span>
-                <span className="text-muted">generating response...</span>
-              </div>
-              <div className="message-content">
-                <BrailleSpinner />
-              </div>
-            </div>
-          )}
+           {isLoading && (
+             <div className="message assistant">
+               <div className="message-header">
+                 <span className="message-role assistant">assistant</span>
+                 <span className="text-muted">thinking...</span>
+               </div>
+               <div className="message-content">
+                 <BrailleSpinner />
+               </div>
+             </div>
+           )}
 
           {/* Auto-scroll anchor */}
           <div ref={messagesEndRef} />
