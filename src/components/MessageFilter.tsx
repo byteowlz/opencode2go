@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react"
-import { Filter, Check } from "lucide-react"
+import { Settings, Check } from "lucide-react"
+import { OpenCodeProvider } from "../services/opencode"
+import { Dropdown } from "./Dropdown"
 
 export interface MessagePartFilters {
   text: boolean
@@ -14,6 +16,12 @@ export interface MessagePartFilters {
 interface MessageFilterProps {
   filters: MessagePartFilters
   onFiltersChange: (filters: MessagePartFilters) => void
+  // Add model selection props
+  providers: OpenCodeProvider[]
+  selectedProvider: string
+  selectedModel: string
+  onProviderChange: (providerId: string) => void
+  onModelChange: (modelId: string) => void
 }
 
 const PART_TYPE_LABELS = {
@@ -36,7 +44,15 @@ const PART_TYPE_ICONS = {
   snapshot: "◈"
 }
 
-export const MessageFilter = ({ filters, onFiltersChange }: MessageFilterProps) => {
+export const MessageFilter = ({ 
+  filters, 
+  onFiltersChange, 
+  providers, 
+  selectedProvider, 
+  selectedModel, 
+  onProviderChange, 
+  onModelChange 
+}: MessageFilterProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -88,9 +104,9 @@ export const MessageFilter = ({ filters, onFiltersChange }: MessageFilterProps) 
       <button 
         className="settings-button-header filter-button" 
         onClick={() => setIsOpen(!isOpen)}
-        title="Filter Message Parts"
+        title="Filters & Model Settings"
       >
-        <Filter size={16} />
+        <Settings size={16} />
         {getActiveCount() < getTotalCount() && (
           <span className="filter-badge">{getActiveCount()}</span>
         )}
@@ -101,26 +117,53 @@ export const MessageFilter = ({ filters, onFiltersChange }: MessageFilterProps) 
           <div className="filter-overlay" onClick={() => setIsOpen(false)} />
           <div className="filter-dropdown">
             <div className="filter-header">
-              <span className="filter-title">Message Parts</span>
-              <div className="filter-actions">
-                <button 
-                  className="filter-action-btn"
-                  onClick={handleSelectAll}
-                  title="Select All"
-                >
-                  All
-                </button>
-                <button 
-                  className="filter-action-btn"
-                  onClick={handleSelectNone}
-                  title="Select None"
-                >
-                  None
-                </button>
-              </div>
+              <span className="filter-title">Filters & Model</span>
             </div>
-            
-            <div className="filter-list">
+
+            {/* Model Selection */}
+            <div className="filter-model-section">
+              <label className="filter-model-label">AI Model</label>
+              <Dropdown
+                options={providers.flatMap(provider => 
+                  provider.models.map(model => ({
+                    value: `${provider.id}:${model.id}`,
+                    label: `${provider.name} • ${model.name}`
+                  }))
+                )}
+                value={selectedProvider && selectedModel ? `${selectedProvider}:${selectedModel}` : ""}
+                onChange={(value: string) => {
+                  const [providerId, modelId] = value.split(':')
+                  onProviderChange(providerId)
+                  onModelChange(modelId)
+                }}
+                placeholder="Select Model"
+                maxWidth="100%"
+              />
+            </div>
+
+            {/* Message Parts Filter */}
+            <div className="filter-section">
+              <div className="filter-subsection-header">
+                <span className="filter-subtitle">Message Parts</span>
+                <div className="filter-actions">
+                  <button 
+                    className="filter-action-btn"
+                    onClick={handleSelectAll}
+                    title="Select All"
+                  >
+                    All
+                  </button>
+                  <button 
+                    className="filter-action-btn"
+                    onClick={handleSelectNone}
+                    title="Select None"
+                  >
+                    None
+                  </button>
+                </div>
+              </div>
+              
+              <div className="filter-list">
               {Object.entries(PART_TYPE_LABELS).map(([partType, label]) => (
                 <label 
                   key={partType}
@@ -147,6 +190,7 @@ export const MessageFilter = ({ filters, onFiltersChange }: MessageFilterProps) 
                   </div>
                 </label>
               ))}
+              </div>
             </div>
 
             <div className="filter-footer">

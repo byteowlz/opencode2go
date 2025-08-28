@@ -25,7 +25,6 @@ interface SidebarProps {
   onManageServers?: () => void
   showAllSessions?: boolean
   onToggleAllSessions?: () => void
-  onOpenSettings?: () => void
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -46,8 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onServerChange,
   onManageServers,
   showAllSessions = false,
-  onToggleAllSessions,
-  onOpenSettings
+  onToggleAllSessions
 }) => {
   // Create provider/model options for nested dropdown
   const getProviderModelOptions = () => {
@@ -264,20 +262,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
             </div>
           </div>
-          
-          {/* Settings Button */}
-          {onOpenSettings && (
-            <div className="sidebar-section" style={{ marginTop: "auto", padding: "1rem" }}>
-              <button
-                className="sidebar-settings-button"
-                onClick={onOpenSettings}
-                title="Settings"
-              >
-                <Settings size={16} />
-                <span>Settings</span>
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </>

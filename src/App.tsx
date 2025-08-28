@@ -7,7 +7,6 @@ import { ServerManager } from "./components/ServerManager"
 import { MessagePart } from "./components/MessagePart"
 import { MessageFilter } from "./components/MessageFilter"
 import { CyclingButton } from "./components/CyclingButton"
-import { Dropdown } from "./components/Dropdown"
 import { BrailleSpinner } from "./components/BrailleSpinner"
 
 import { OpenCodeServer } from "./types/servers"
@@ -801,27 +800,14 @@ function App() {
             <Plus size={16} />
             <span>New Chat</span>
           </button>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>Model:</span>
-            <Dropdown
-              options={providers.flatMap(provider => 
-                provider.models.map(model => ({
-                  value: `${provider.id}:${model.id}`,
-                  label: `${provider.name} • ${model.name}`
-                }))
-              )}
-              value={selectedProvider && selectedModel ? `${selectedProvider}:${selectedModel}` : ""}
-              onChange={(value: string) => {
-                const [providerId, modelId] = value.split(':')
-                handleProviderChange(providerId)
-                setSelectedModel(modelId)
-              }}
-              placeholder="Select Model"
-            />
-          </div>
           <MessageFilter
             filters={messageFilters}
             onFiltersChange={setMessageFilters}
+            providers={providers}
+            selectedProvider={selectedProvider}
+            selectedModel={selectedModel}
+            onProviderChange={handleProviderChange}
+            onModelChange={setSelectedModel}
           />
         </div>
       </div>
@@ -959,7 +945,6 @@ function App() {
         onManageServers={handleManageServers}
         showAllSessions={showAllSessions}
         onToggleAllSessions={handleToggleAllSessions}
-        onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
       <ServerManager
