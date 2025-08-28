@@ -112,10 +112,10 @@ class OpenCodeService {
     // Use settings service to get the server URL if no baseUrl provided
     this.baseUrl = baseUrl || settingsService.getServerUrl()
 
-    // Convert relative URL to absolute URL for the SDK
-    const absoluteBaseUrl = this.baseUrl.startsWith("http") ? this.baseUrl : `${window.location.origin}${this.baseUrl}`
+    // Ensure we have a complete URL with protocol
+    const absoluteBaseUrl = this.baseUrl.startsWith("http") ? this.baseUrl : `http://${this.baseUrl}`
 
-    console.log("Initializing OpenCode client with absolute baseURL:", absoluteBaseUrl)
+    console.log("Initializing OpenCode client with baseURL:", absoluteBaseUrl)
     this.client = new Opencode({
       baseURL: absoluteBaseUrl,
       fetch: tauriFetch,
@@ -124,7 +124,7 @@ class OpenCodeService {
 
   updateServerUrl(newUrl?: string): void {
     this.baseUrl = newUrl || settingsService.getServerUrl()
-    const absoluteBaseUrl = this.baseUrl.startsWith("http") ? this.baseUrl : `${window.location.origin}${this.baseUrl}`
+    const absoluteBaseUrl = this.baseUrl.startsWith("http") ? this.baseUrl : `http://${this.baseUrl}`
 
     console.log("Updating OpenCode client with new baseURL:", absoluteBaseUrl)
     this.client = new Opencode({
@@ -144,24 +144,28 @@ class OpenCodeService {
       console.log("=== TESTING CONNECTION ===")
       console.log("Base URL:", this.baseUrl)
       console.log("Full URL:", `${this.baseUrl}/app`)
-      console.log("Current location:", window.location.href)
 
       // First try a direct fetch using Tauri HTTP client to avoid CORS
+      console.log("Testing direct HTTP connection...")
       const directResponse = await tauriHttpClient.get(`${this.baseUrl}/app`)
       console.log("Tauri HTTP response:", directResponse.status, directResponse.statusText)
 
       if (!directResponse.ok) {
-        console.error("Tauri HTTP request failed:", directResponse.status)
+        console.error("❌ Tauri HTTP request failed:", {
+          status: directResponse.status,
+          statusText: directResponse.statusText,
+          url: `${this.baseUrl}/app`
+        })
         return false
       }
 
       const directData = await directResponse.json()
-      console.log("Tauri HTTP data:", directData)
+      console.log("✅ Tauri HTTP data received:", directData)
 
       // Now try the SDK
-      console.log("Testing SDK...")
+      console.log("Testing SDK connection...")
       const response = await this.client.app.get()
-      console.log("SDK connection successful:", response)
+      console.log("✅ SDK connection successful:", response)
       console.log("=== CONNECTION SUCCESS ===")
       return true
     } catch (error: unknown) {
@@ -171,9 +175,20 @@ class OpenCodeService {
       console.error("Error details:", {
         message: errorObj?.message,
         status: errorObj?.status,
+        response: errorObj?.response,
         baseUrl: this.baseUrl,
         stack: errorObj?.stack,
       })
+
+      // Try to provide helpful troubleshooting info
+      if (errorObj?.message?.includes("ECONNREFUSED")) {
+        console.error("💡 Troubleshooting: Server may not be running or port may be incorrect")
+      } else if (errorObj?.message?.includes("ENOTFOUND")) {
+        console.error("💡 Troubleshooting: Hostname may be incorrect or unreachable")
+      } else if (errorObj?.status === 404) {
+        console.error("💡 Troubleshooting: Server is running but /app endpoint not found")
+      }
+
       return false
     }
   }
@@ -400,10 +415,10 @@ class OpenCodeService {
       console.log("Provider ID:", providerID)
       console.log("Model ID:", modelID)
       console.log("Mode:", mode)
-      console.log("Content:", content)
+      console.log("Content length:", content.length)
       console.log("Provided messageID:", messageID)
 
-      const finalMessageID = messageID || `msg_${Date.now()}`
+      const finalMessageID = messageID || `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
 
       // Use the new SDK chat method
       const chatParams = {
@@ -415,7 +430,7 @@ class OpenCodeService {
           {
             type: "text" as const,
             text: content,
-            id: `part_${Date.now()}`,
+            id: `part_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
           },
         ],
       }
@@ -424,17 +439,26 @@ class OpenCodeService {
 
       // Use the SDK's chat method
       const response = await this.client.session.chat(sessionId, chatParams)
-      console.log("Chat response:", response)
+      console.log("Chat response received:", response)
 
       // The response will come through Server-Sent Events
-      console.log("Message sent successfully, response will come via Server-Sent Events")
-      
+      console.log("✅ Message sent successfully, response will come via Server-Sent Events")
+
       // Return the messageID so caller can track it
       return finalMessageID
     } catch (error: unknown) {
-      console.error("Failed to send message:", error)
+      console.error("❌ Failed to send message:", error)
       const errorObj = error as any
-      console.error("Error details:", errorObj)
+      console.error("Error details:", {
+        message: errorObj?.message,
+        status: errorObj?.status,
+        response: errorObj?.response,
+        stack: errorObj?.stack,
+        baseUrl: this.baseUrl,
+        sessionId,
+        providerID,
+        modelID,
+      })
 
       // Return null for errors - let the UI handle error display
       return null
@@ -474,27 +498,7 @@ class OpenCodeService {
 
       } catch (error) {
         console.error("❌ Failed to start Tauri SSE stream:", error)
-        // Fallback to browser EventSource
-        this.eventSource = new EventSource(`${this.baseUrl}/event`)
-
-        this.eventSource.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data)
-            console.log("📡 SSE Event:", data.type, data)
-            onEvent(data)
-          } catch (error: unknown) {
-            console.error("❌ Failed to parse SSE event:", error, "Raw data:", event.data)
-          }
-        }
-
-        this.eventSource.onerror = (error) => {
-          console.error("❌ EventSource error:", error)
-          console.log("EventSource readyState:", this.eventSource?.readyState)
-        }
-
-        this.eventSource.onopen = () => {
-          console.log("✅ EventSource connected to:", `${this.baseUrl}/event`)
-        }
+        console.error("SSE setup failed - messages may not be received in real-time")
       }
     }
 
