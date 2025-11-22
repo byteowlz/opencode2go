@@ -1,4 +1,4 @@
-import { Opencode } from "@opencode-ai/sdk"
+import { createOpencodeClient, OpencodeClient } from "@opencode-ai/sdk"
 import { settingsService } from "./settings"
 import { tauriHttpClient, tauriFetch } from "./http"
 
@@ -69,7 +69,7 @@ export interface OpenCodeMode {
 }
 
 class OpenCodeService {
-  private client: Opencode
+  private client: OpencodeClient
   private baseUrl: string
   private eventSource: EventSource | null = null
 
@@ -81,8 +81,8 @@ class OpenCodeService {
     const absoluteBaseUrl = this.baseUrl.startsWith("http") ? this.baseUrl : `${window.location.origin}${this.baseUrl}`
 
     console.log("Initializing OpenCode client with absolute baseURL:", absoluteBaseUrl)
-    this.client = new Opencode({
-      baseURL: absoluteBaseUrl,
+    this.client = createOpencodeClient({
+      baseUrl: absoluteBaseUrl,
       fetch: tauriFetch,
     })
   }
@@ -92,8 +92,8 @@ class OpenCodeService {
     const absoluteBaseUrl = this.baseUrl.startsWith("http") ? this.baseUrl : `${window.location.origin}${this.baseUrl}`
 
     console.log("Updating OpenCode client with new baseURL:", absoluteBaseUrl)
-    this.client = new Opencode({
-      baseURL: absoluteBaseUrl,
+    this.client = createOpencodeClient({
+      baseUrl: absoluteBaseUrl,
       fetch: tauriFetch,
     })
 
@@ -108,11 +108,12 @@ class OpenCodeService {
     try {
       console.log("=== TESTING CONNECTION ===")
       console.log("Base URL:", this.baseUrl)
-      console.log("Full URL:", `${this.baseUrl}/app`)
+      console.log("Full URL:", `${this.baseUrl}/config`)
       console.log("Current location:", window.location.href)
 
       // First try a direct fetch using Tauri HTTP client to avoid CORS
-      const directResponse = await tauriHttpClient.get(`${this.baseUrl}/app`)
+      // Use /config as it's a GET request that should return 200
+      const directResponse = await tauriHttpClient.get(`${this.baseUrl}/config`)
       console.log("Tauri HTTP response:", directResponse.status, directResponse.statusText)
 
       if (!directResponse.ok) {
@@ -125,8 +126,12 @@ class OpenCodeService {
 
       // Now try the SDK
       console.log("Testing SDK...")
-      const response = await this.client.app.get()
-      console.log("SDK connection successful:", response)
+      const { data, error } = await this.client.config.get()
+      if (error) {
+        console.error("SDK connection failed with error:", error)
+        return false
+      }
+      console.log("SDK connection successful:", data)
       console.log("=== CONNECTION SUCCESS ===")
       return true
     } catch (error: unknown) {
@@ -145,17 +150,21 @@ class OpenCodeService {
 
   async getProviders(): Promise<{ providers: OpenCodeProvider[]; defaults: Record<string, string> }> {
     try {
-      const response = await this.client.config.providers()
+      const { data, error } = await this.client.config.providers()
+      if (error || !data) {
+        throw error || new Error("Failed to fetch providers")
+      }
+
       return {
-        providers: response.providers.map((provider) => ({
+        providers: data.providers.map((provider: any) => ({
           id: provider.id,
           name: provider.name,
-          models: Object.values(provider.models).map((model) => ({
+          models: Object.values(provider.models).map((model: any) => ({
             id: model.id,
             name: model.name,
           })),
         })),
-        defaults: response.default || {},
+        defaults: data.default || {},
       }
     } catch (error: unknown) {
       console.error("Failed to get providers:", error)
@@ -166,27 +175,22 @@ class OpenCodeService {
   async getModes(): Promise<OpenCodeMode[]> {
     try {
       console.log("=== FETCHING MODES ===")
-      console.log("Base URL:", this.baseUrl)
-      console.log("Full modes URL:", `${this.baseUrl}/config/modes`)
+      console.log("Using SDK app.agents()")
       
-      const response = await tauriHttpClient.get(`${this.baseUrl}/config/modes`)
-      console.log("Modes response status:", response.status, response.statusText)
+      const { data: agents, error } = await this.client.app.agents()
       
-      if (!response.ok) {
-        console.error("Modes request failed with status:", response.status)
-        const errorText = await response.text()
-        console.error("Error response body:", errorText)
-        throw new Error(`Failed to fetch modes: ${response.status} - ${errorText}`)
+      if (error || !agents) {
+        console.error("Modes request failed:", error)
+        throw error || new Error("Failed to fetch modes")
       }
       
-      const modes = await response.json()
-      console.log("Raw modes response:", modes)
+      console.log("Raw agents response:", agents)
       
-      const processedModes = modes.map((mode: any) => ({
-        name: mode.name,
-        model: mode.model,
-        prompt: mode.prompt,
-        tools: mode.tools || {},
+      const processedModes = agents.map((agent: any) => ({
+        name: agent.name,
+        model: agent.model,
+        prompt: agent.prompt,
+        tools: agent.tools || {},
       }))
       
       console.log("Processed modes:", processedModes)
@@ -228,11 +232,16 @@ class OpenCodeService {
       console.log("=== FETCHING SESSIONS ===")
       console.log("Base URL:", this.baseUrl)
       
-      const sessions = await this.client.session.list()
+      const { data: sessions, error } = await this.client.session.list()
+
+      if (error || !sessions) {
+        throw error || new Error("Failed to fetch sessions")
+      }
+
       console.log("Raw sessions response:", sessions)
       console.log("Number of sessions found:", sessions.length)
       
-      const processedSessions = sessions.map((session) => ({
+      const processedSessions = sessions.map((session: any) => ({
         id: session.id,
         title: session.title,
         created: new Date(session.time.created * 1000),
@@ -259,7 +268,12 @@ class OpenCodeService {
 
   async createSession(): Promise<OpenCodeSession | null> {
     try {
-      const session = await this.client.session.create()
+      const { data: session, error } = await this.client.session.create()
+
+      if (error || !session) {
+        throw error || new Error("Failed to create session")
+      }
+
       return {
         id: session.id,
         title: session.title,
@@ -274,7 +288,13 @@ class OpenCodeService {
 
   async getMessages(sessionId: string): Promise<OpenCodeMessage[]> {
     try {
-      const messages = await this.client.session.messages(sessionId)
+      // New SDK expects options object with path
+      const { data: messages, error } = await this.client.session.messages({ path: { id: sessionId } })
+
+      if (error || !messages) {
+        throw error || new Error("Failed to get messages")
+      }
+
       const result: OpenCodeMessage[] = []
 
       for (const message of messages) {
@@ -287,7 +307,10 @@ class OpenCodeService {
           text: part.text,
           tool: part.tool,
           filename: part.filename,
-          snapshot: part.snapshot,
+          // Handle snapshot which might be object or string
+          snapshot: typeof part.snapshot === 'string'
+            ? { id: part.id, data: part.snapshot }
+            : part.snapshot,
           invocation: part.invocation,
           state: part.state
         }))
@@ -296,14 +319,18 @@ class OpenCodeService {
         const textParts = message.parts.filter((part: any) => part.type === "text")
         const content = textParts.map((part: any) => part.text).join("\n")
 
+        // Handle providerID and modelID location which might differ for User vs Assistant messages
+        const providerID = messageInfo.providerID || messageInfo.model?.providerID
+        const modelID = messageInfo.modelID || messageInfo.model?.modelID
+
         result.push({
           id: messageInfo.id,
           role: messageInfo.role,
           content,
           parts,
           timestamp: new Date(messageInfo.time.created * 1000),
-          providerID: messageInfo.providerID,
-          modelID: messageInfo.modelID,
+          providerID,
+          modelID,
         })
       }
 
@@ -327,22 +354,24 @@ class OpenCodeService {
       console.log("Session ID:", sessionId)
       console.log("Provider ID:", providerID)
       console.log("Model ID:", modelID)
-      console.log("Mode:", mode)
+      console.log("Mode/Agent:", mode)
       console.log("Content:", content)
 
       const messageID = `msg_${Date.now()}`
       const partID = `part_${Date.now()}`
 
+      // Updated request body structure for new SDK API
       const requestBody = {
         messageID,
-        providerID,
-        modelID,
-        mode,
+        model: {
+          providerID,
+          modelID,
+        },
+        agent: mode,
         parts: [
           {
             id: partID,
-            sessionID: sessionId,
-            messageID,
+            // sessionID and messageID might be optional or inferred
             type: "text",
             text: content,
           },
@@ -354,7 +383,7 @@ class OpenCodeService {
       console.log("Request body:", JSON.stringify(requestBody, null, 2))
 
       // Use Tauri HTTP client to avoid CORS issues
-      const response = await tauriHttpClient.post(`${this.baseUrl}/session/${sessionId}/message`, {
+      const response = await tauriHttpClient.post(fullUrl, {
         headers: {
           "Content-Type": "application/json",
         },
@@ -375,13 +404,13 @@ class OpenCodeService {
         throw new Error(`HTTP ${response.status}: ${errorText}`)
       }
 
-      // For now, let's handle as regular JSON response since Tauri HTTP client may not support streaming the same way
       const data = await response.json()
       console.log("Chat response received:", data)
 
       // Extract the actual response content from the data
       let responseContent = "Response received"
 
+      // data structure is { info: AssistantMessage, parts: Part[] }
       if (data && data.parts && Array.isArray(data.parts)) {
         const textParts = data.parts.filter((part: any) => part.type === "text")
         if (textParts.length > 0) {
@@ -393,8 +422,14 @@ class OpenCodeService {
         responseContent = data.content
       }
 
+      // Extract ID and timestamp from data.info if available
+      const responseId = data.info?.id || data.id || messageID
+      const responseTimestamp = data.info?.time?.created
+        ? new Date(data.info.time.created * 1000)
+        : new Date()
+
       return {
-        id: data.id || messageID,
+        id: responseId,
         role: "assistant",
         content: responseContent,
         parts: data.parts ? data.parts.map((part: any) => ({
@@ -403,7 +438,9 @@ class OpenCodeService {
           text: part.text,
           tool: part.tool,
           filename: part.filename,
-          snapshot: part.snapshot,
+          snapshot: typeof part.snapshot === 'string'
+            ? { id: part.id, data: part.snapshot }
+            : part.snapshot,
           invocation: part.invocation,
           state: part.state
         })) : [{
@@ -411,7 +448,7 @@ class OpenCodeService {
           type: "text",
           text: responseContent
         }],
-        timestamp: new Date(data.time?.created ? data.time.created * 1000 : Date.now()),
+        timestamp: responseTimestamp,
       }
     } catch (error: unknown) {
       console.error("Failed to send message:", error)
@@ -464,7 +501,9 @@ class OpenCodeService {
 
   async deleteSession(sessionId: string): Promise<boolean> {
     try {
-      await this.client.session.delete(sessionId)
+      // New SDK expects options object with path
+      const { error } = await this.client.session.delete({ path: { id: sessionId } })
+      if (error) throw error
       return true
     } catch (error: unknown) {
       console.error("Failed to delete session:", error)
