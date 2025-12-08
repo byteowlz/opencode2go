@@ -438,14 +438,23 @@ class OpenCodeService {
       console.log("Chat params:", JSON.stringify(chatParams, null, 2))
 
       // Use the SDK's chat method
-      const response = await this.client.session.chat(sessionId, chatParams)
-      console.log("Chat response received:", response)
-
-      // The response will come through Server-Sent Events
-      console.log("✅ Message sent successfully, response will come via Server-Sent Events")
-
-      // Return the messageID so caller can track it
-      return finalMessageID
+      // Simple retry with backoff for transient failures
+      const maxSendAttempts = 3
+      let lastErr: unknown = null
+      for (let i = 0; i < maxSendAttempts; i++) {
+        try {
+          const resp = await this.client.session.chat(sessionId, chatParams)
+          console.log("Chat response received:", resp)
+          console.log("✅ Message sent successfully, response will come via Server-Sent Events")
+          return finalMessageID
+        } catch (e) {
+          lastErr = e
+          const delay = 300 * 2 ** i + Math.floor(Math.random() * 150)
+          console.warn(`Send attempt ${i + 1} failed; retrying in ${delay}ms`)
+          await new Promise((r) => setTimeout(r, delay))
+        }
+      }
+      throw lastErr
     } catch (error: unknown) {
       console.error("❌ Failed to send message:", error)
       const errorObj = error as any
@@ -466,6 +475,22 @@ class OpenCodeService {
   }
 
   subscribeToEvents(onEvent: (event: any) => void): () => void {
+    let reconnectAttempts = 0
+    const maxAttempts = 10
+    const baseDelay = 500
+    const jitter = () => Math.floor(Math.random() * 200)
+    const scheduleReconnect = () => {
+      if (reconnectAttempts >= maxAttempts) {
+        console.error("SSE reconnect: reached max attempts, giving up")
+        return
+      }
+      const delay = Math.min(8000, baseDelay * 2 ** reconnectAttempts) + jitter()
+      reconnectAttempts++
+      console.warn(`SSE reconnect scheduled in ${delay}ms (attempt ${reconnectAttempts})`)
+      setTimeout(() => {
+        setupTauriSSE()
+      }, delay)
+    }
     if (this.eventSource) {
       this.eventSource.close()
     }
@@ -484,6 +509,8 @@ class OpenCodeService {
         unlistenMessage = await listen('sse-message', (event) => {
           try {
             const data = JSON.parse(event.payload as string)
+            // Reset attempts on successful traffic
+            reconnectAttempts = 0
             console.log("📡 Tauri SSE Event:", data.type, data)
             onEvent(data)
           } catch (error: unknown) {
@@ -494,11 +521,13 @@ class OpenCodeService {
         // Listen for SSE errors
         unlistenError = await listen('sse-error', (event) => {
           console.error("❌ Tauri SSE error:", event.payload)
+          scheduleReconnect()
         })
 
       } catch (error) {
         console.error("❌ Failed to start Tauri SSE stream:", error)
         console.error("SSE setup failed - messages may not be received in real-time")
+        scheduleReconnect()
       }
     }
 
@@ -515,6 +544,8 @@ class OpenCodeService {
         this.eventSource.close()
         this.eventSource = null
       }
+      // prevent further reconnects on cleanup
+      reconnectAttempts = maxAttempts
     }
   }
 
