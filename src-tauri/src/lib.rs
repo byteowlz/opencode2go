@@ -113,7 +113,7 @@ async fn discover_servers() -> Result<Vec<DiscoveredServer>, String> {
     let local_ips = get_local_network_ranges().await?;
     
     // Common opencode ports to check
-    let ports = vec![3000, 8080, 8000, 3001, 8001];
+    let ports = vec![4096, 3000, 8080, 8000, 3001, 8001];
     
     for network in local_ips {
         for port in &ports {

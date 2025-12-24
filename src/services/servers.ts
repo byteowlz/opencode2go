@@ -24,6 +24,20 @@ class ServersService {
           ...server,
           lastConnected: server.lastConnected ? new Date(server.lastConnected) : undefined
         }))
+
+        // Migrate legacy default server port to the current default
+        let updated = false
+        this.servers = this.servers.map((server) => {
+          if (server.isDefault && server.port === 3000) {
+            updated = true
+            return { ...server, port: 4096 }
+          }
+          return server
+        })
+
+        if (updated) {
+          this.saveServers()
+        }
       } else {
         // Initialize with default server
         this.servers = [this.getDefaultServer()]
@@ -76,7 +90,7 @@ class ServersService {
       name: "Local Server",
       protocol: "http",
       host: "localhost",
-      port: 3000,
+      port: 4096,
       isDefault: true
     }
   }
@@ -146,7 +160,7 @@ class ServersService {
 
   getServerUrl(server?: OpenCodeServer): string {
     const targetServer = server || this.getCurrentServer()
-    if (!targetServer) return "http://localhost:3000"
+    if (!targetServer) return "http://localhost:4096"
     
     return `${targetServer.protocol}://${targetServer.host}:${targetServer.port}`
   }

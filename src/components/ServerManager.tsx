@@ -38,7 +38,7 @@ export const ServerManager: React.FC<ServerManagerProps> = ({
     name: "",
     protocol: "http" as "http" | "https",
     host: "localhost",
-    port: 3000
+    port: 4096
   })
 
   // Settings state
@@ -59,7 +59,7 @@ export const ServerManager: React.FC<ServerManagerProps> = ({
       name: "",
       protocol: "http",
       host: "localhost",
-      port: 3000
+      port: 4096
     })
     setEditingServer(null)
     setIsAddingNew(false)
@@ -415,7 +415,7 @@ export const ServerManager: React.FC<ServerManagerProps> = ({
                   <input
                     type="number"
                     value={formData.port}
-                    onChange={(e) => setFormData({ ...formData, port: parseInt(e.target.value) || 3000 })}
+                    onChange={(e) => setFormData({ ...formData, port: parseInt(e.target.value) || 4096 })}
                     min="1"
                     max="65535"
                     className="form-input"

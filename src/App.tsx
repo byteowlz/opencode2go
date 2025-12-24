@@ -26,6 +26,8 @@ function App() {
   const currentSessionRef = useRef<OpenCodeSession | null>(null)
   const sentMessageIdsRef = useRef<Set<string>>(new Set())
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const waitingForAssistantRef = useRef(false)
+  const assistantSeenRef = useRef(false)
   const [showScrollButton, setShowScrollButton] = useState(false)
   const [currentSession, setCurrentSession] = useState<OpenCodeSession | null>(null)
   
@@ -271,8 +273,8 @@ function App() {
           } else if (event.type === "message.part.updated") {
             // Handle streaming message parts
             const part = event.properties?.part
-            if (part && currentSessionRef.current && part.sessionID === currentSessionRef.current.id) {
-              console.log("✅ Processing message part:", part.type, part.messageID, "Content:", part.text?.substring(0, 50))
+              if (part && currentSessionRef.current && part.sessionID === currentSessionRef.current.id) {
+                console.log("✅ Processing message part:", part.type, part.messageID, "Content:", part.text?.substring(0, 50))
               console.log("📊 Part details:", { 
                 type: part.type, 
                 hasText: !!part.text, 
@@ -374,6 +376,10 @@ function App() {
                     isUserMessage,
                     role: isUserMessage ? "user" : "assistant"
                   })
+
+                  if (!isUserMessage) {
+                    assistantSeenRef.current = true
+                  }
                   
                   // Generate appropriate content based on part type
                   // According to OpenCode SDK: only "text" and "reasoning" parts have text content
@@ -436,6 +442,8 @@ function App() {
             if (messageInfo && currentSessionRef.current && messageInfo.sessionID === currentSessionRef.current.id) {
               // Only stop loading if this is an ASSISTANT message (not a user message)
               if (messageInfo.role === "assistant") {
+                assistantSeenRef.current = true
+                waitingForAssistantRef.current = false
                 console.log("✅ Assistant message completed - stopping loading:", messageInfo)
                 setIsLoading(false)
                 // Clear any pending timeout
@@ -485,7 +493,7 @@ function App() {
               })
             }
           } else if (event.type === "session.idle") {
-            // Session is idle, stop loading
+            // Session is idle, only stop loading after we've seen assistant output
             const sessionInfo = event.properties
             console.log("💤 session.idle event details:", {
               hasProperties: !!sessionInfo,
@@ -494,12 +502,17 @@ function App() {
               matches: sessionInfo && currentSessionRef.current && sessionInfo.sessionID === currentSessionRef.current.id
             })
             if (sessionInfo && currentSessionRef.current && sessionInfo.sessionID === currentSessionRef.current.id) {
-              console.log("✅ Session idle - stopping loading:", sessionInfo)
-              setIsLoading(false)
-              // Clear any pending timeout
-              if (loadingTimeoutRef.current) {
-                clearTimeout(loadingTimeoutRef.current)
-                loadingTimeoutRef.current = null
+              if (assistantSeenRef.current) {
+                console.log("✅ Session idle after assistant output - stopping loading:", sessionInfo)
+                setIsLoading(false)
+                waitingForAssistantRef.current = false
+                // Clear any pending timeout
+                if (loadingTimeoutRef.current) {
+                  clearTimeout(loadingTimeoutRef.current)
+                  loadingTimeoutRef.current = null
+                }
+              } else {
+                console.log("⏳ Session idle before assistant output, keeping loading state")
               }
 
               // Session is now idle
@@ -714,6 +727,26 @@ function App() {
       return
     }
 
+    // Ensure provider/model are valid for the current server
+    let providerToUse = providers.find((p) => p.id === selectedProvider)
+    if (!providerToUse && providers.length > 0) {
+      providerToUse = providers[0]
+      setSelectedProvider(providerToUse.id)
+      console.warn("⚠️ Selected provider not found on this server, falling back to", providerToUse.id)
+    }
+
+    let modelToUse = providerToUse?.models.find((m) => m.id === selectedModel)
+    if (!modelToUse && providerToUse?.models.length) {
+      modelToUse = providerToUse.models[0]
+      setSelectedModel(modelToUse.id)
+      console.warn("⚠️ Selected model not found for provider, falling back to", modelToUse.id)
+    }
+
+    if (!providerToUse || !modelToUse) {
+      console.error("❌ No provider/model available to send message")
+      return
+    }
+
     console.log("📤 Sending message:", {
       sessionId: currentSession.id,
       sessionServerId: currentSession.serverId,
@@ -724,6 +757,8 @@ function App() {
     const messageContent = input.trim()
     setInput("")
     setIsLoading(true)
+    waitingForAssistantRef.current = true
+    assistantSeenRef.current = false
 
     // Add safety timeout to prevent infinite loading state
     loadingTimeoutRef.current = setTimeout(() => {
@@ -734,27 +769,7 @@ function App() {
 
     // Loading state will be handled by the BrailleSpinner below
 
-    try {
-      // Generate message ID before sending (same logic as in opencode service)
-      const messageId = `msg_${Date.now()}`
-
-      // Track this message ID as a user message BEFORE sending
-      console.log("📤 Pre-tracking sent message ID:", messageId)
-      setSentMessageIds(prev => new Set([...prev, messageId]))
-      
-      // Send the message - the response will come through the event stream
-      await openCodeService.sendMessage(
-        currentSession.id,
-        messageContent,
-        selectedProvider,
-        selectedModel,
-        selectedMode,
-        messageId // Pass the messageId to ensure consistency
-      )
-      
-      // The loading state will be managed by the streaming events
-    } catch (error) {
-      console.error("Failed to send message:", error)
+    const showSendError = () => {
       const errorMessage: OpenCodeMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -768,6 +783,45 @@ function App() {
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, errorMessage])
+    }
+
+    try {
+      // Generate message ID before sending (same logic as in opencode service)
+      const messageId = `msg_${Date.now()}`
+
+      // Track this message ID as a user message BEFORE sending
+      console.log("📤 Pre-tracking sent message ID:", messageId)
+      setSentMessageIds(prev => new Set([...prev, messageId]))
+      
+      // Send the message - the response will come through the event stream
+      const sentId = await openCodeService.sendMessage(
+        currentSession.id,
+        messageContent,
+        providerToUse.id,
+        modelToUse.id,
+        selectedMode,
+        messageId // Pass the messageId to ensure consistency
+      )
+
+      if (!sentId) {
+        setSentMessageIds(prev => {
+          const next = new Set(prev)
+          next.delete(messageId)
+          return next
+        })
+        showSendError()
+        setIsLoading(false)
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current)
+          loadingTimeoutRef.current = null
+        }
+        return
+      }
+      
+      // The loading state will be managed by the streaming events
+    } catch (error) {
+      console.error("Failed to send message:", error)
+      showSendError()
       setIsLoading(false)
       // Clear any pending timeout
       if (loadingTimeoutRef.current) {
