@@ -1,136 +1,35 @@
-import { Opencode } from "@opencode-ai/sdk"
+import { createOpencodeClient } from "@opencode-ai/sdk/client"
+import type { Config as OpencodeConfig } from "@opencode-ai/sdk/client"
 import { settingsService } from "./settings"
 import { tauriHttpClient, tauriFetch } from "./http"
 import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
-
-export interface OpenCodePart {
-  id: string
-  type: "text" | "reasoning" | "file" | "tool" | "step-start" | "step-finish" | "snapshot" | "patch" | "agent"
-  text?: string // Only available on text/reasoning parts
-  tool?: string
-  filename?: string
-  snapshot?: {
-    id: string
-    title?: string
-    url?: string
-    data?: any
-  }
-  invocation?: {
-    tool: string
-    input: any
-  }
-  state?: {
-    status: "pending" | "running" | "completed" | "error"
-    error?: string
-    time?: {
-      start: number
-      end: number
-    }
-    input?: any
-    output?: any
-  }
-  // Additional fields from OpenCode SDK
-  synthetic?: boolean
-  time?: {
-    start: number
-    end?: number
-  }
-  cost?: number
-  tokens?: {
-    input: number
-    output: number
-    reasoning: number
-    cache: {
-      read: number
-      write: number
-    }
-  }
-}
-
-export interface OpenCodeMessage {
-  id: string
-  role: "user" | "assistant"
-  content: string
-  parts: OpenCodePart[]
-  timestamp: Date
-  providerID?: string
-  modelID?: string
-}
-
-export interface OpenCodeSession {
-  id: string
-  title: string
-  created: Date
-  updated: Date
-  parentID?: string
-  serverId?: string
-  serverName?: string
-}
-
-export interface OpenCodeProvider {
-  id: string
-  name: string
-  models: OpenCodeModel[]
-}
-
-export interface OpenCodeModel {
-  id: string
-  name: string
-}
-
-export interface OpenCodeMode {
-  name: string
-  model?: {
-    modelID: string
-    providerID: string
-  }
-  prompt?: string
-  tools: Record<string, boolean>
-}
-
-export interface ToastNotification {
-  title?: string
-  message: string
-  variant: "info" | "success" | "warning" | "error"
-}
-
-export interface OpenCodeAgent {
-  id: string
-  name: string
-  description?: string
-  type: string
-  tools?: string[]
-}
+import { Permission } from "../types/settings"
+import {
+  OpenCodeAgent,
+  OpenCodeMessage,
+  OpenCodeMode,
+  OpenCodePart,
+  OpenCodeProvider,
+  OpenCodeSession,
+  ToastNotification,
+} from "./opencode-types"
+import { buildPermissionUpdate, normalizeAgents, normalizeModes, normalizeProviders } from "./opencode-normalizers"
 
 class OpenCodeService {
-  private client: Opencode
+  private client: ReturnType<typeof createOpencodeClient>
   private baseUrl: string
   private eventSource: EventSource | null = null
 
   constructor(baseUrl?: string) {
     // Use settings service to get the server URL if no baseUrl provided
     this.baseUrl = baseUrl || settingsService.getServerUrl()
-
-    // Ensure we have a complete URL with protocol
-    const absoluteBaseUrl = this.baseUrl.startsWith("http") ? this.baseUrl : `http://${this.baseUrl}`
-
-    console.log("Initializing OpenCode client with baseURL:", absoluteBaseUrl)
-    this.client = new Opencode({
-      baseURL: absoluteBaseUrl,
-      fetch: tauriFetch,
-    })
+    this.client = this.createClient(this.baseUrl)
   }
 
   updateServerUrl(newUrl?: string): void {
     this.baseUrl = newUrl || settingsService.getServerUrl()
-    const absoluteBaseUrl = this.baseUrl.startsWith("http") ? this.baseUrl : `http://${this.baseUrl}`
-
-    console.log("Updating OpenCode client with new baseURL:", absoluteBaseUrl)
-    this.client = new Opencode({
-      baseURL: absoluteBaseUrl,
-      fetch: tauriFetch,
-    })
+    this.client = this.createClient(this.baseUrl)
 
     // Close existing event source and reconnect
     if (this.eventSource) {
@@ -139,22 +38,32 @@ class OpenCodeService {
     }
   }
 
+  private createClient(url: string) {
+    const baseUrl = url.startsWith("http") ? url : `http://${url}`
+
+    console.log("Initializing OpenCode client with baseUrl:", baseUrl)
+    return createOpencodeClient({
+      baseUrl,
+      fetch: tauriFetch,
+    })
+  }
+
   async testConnection(): Promise<boolean> {
     try {
       console.log("=== TESTING CONNECTION ===")
       console.log("Base URL:", this.baseUrl)
-      console.log("Full URL:", `${this.baseUrl}/app`)
+      console.log("Full URL:", `${this.baseUrl}/config`)
 
       // First try a direct fetch using Tauri HTTP client to avoid CORS
       console.log("Testing direct HTTP connection...")
-      const directResponse = await tauriHttpClient.get(`${this.baseUrl}/app`)
+      const directResponse = await tauriHttpClient.get(`${this.baseUrl}/config`)
       console.log("Tauri HTTP response:", directResponse.status, directResponse.statusText)
 
       if (!directResponse.ok) {
         console.error("❌ Tauri HTTP request failed:", {
           status: directResponse.status,
           statusText: directResponse.statusText,
-          url: `${this.baseUrl}/app`
+          url: `${this.baseUrl}/config`
         })
         return false
       }
@@ -164,8 +73,16 @@ class OpenCodeService {
 
       // Now try the SDK
       console.log("Testing SDK connection...")
-      const response = await this.client.app.get()
-      console.log("✅ SDK connection successful:", response)
+      const response = await this.client.config.get()
+      if (response.error) {
+        console.error("SDK connection failed:", response.error)
+        return false
+      }
+      if (!response.data) {
+        console.error("SDK connection returned empty response")
+        return false
+      }
+      console.log("✅ SDK connection successful:", response.data)
       console.log("=== CONNECTION SUCCESS ===")
       return true
     } catch (error: unknown) {
@@ -186,7 +103,7 @@ class OpenCodeService {
       } else if (errorObj?.message?.includes("ENOTFOUND")) {
         console.error("💡 Troubleshooting: Hostname may be incorrect or unreachable")
       } else if (errorObj?.status === 404) {
-        console.error("💡 Troubleshooting: Server is running but /app endpoint not found")
+        console.error("💡 Troubleshooting: Server is running but /config endpoint not found")
       }
 
       return false
@@ -195,18 +112,18 @@ class OpenCodeService {
 
   async getProviders(): Promise<{ providers: OpenCodeProvider[]; defaults: Record<string, string> }> {
     try {
-      const response = await this.client.app.providers()
-      return {
-        providers: response.providers.map((provider) => ({
-          id: provider.id,
-          name: provider.name,
-          models: Object.values(provider.models).map((model) => ({
-            id: model.id,
-            name: model.name,
-          })),
-        })),
-        defaults: response.default || {},
+      const response = await this.client.config.providers()
+      if (response.data) {
+        return normalizeProviders(response.data)
       }
+
+      const fallbackResponse = await tauriHttpClient.get(`${this.baseUrl}/app/providers`)
+      if (fallbackResponse.ok) {
+        const fallbackData = await fallbackResponse.json()
+        return normalizeProviders(fallbackData)
+      }
+
+      return { providers: [], defaults: {} }
     } catch (error: unknown) {
       console.error("Failed to get providers:", error)
       return { providers: [], defaults: {} }
@@ -218,20 +135,29 @@ class OpenCodeService {
       console.log("=== FETCHING MODES ===")
       console.log("Base URL:", this.baseUrl)
       
-      const modes = await this.client.app.modes()
-      console.log("Raw modes response:", modes)
+      const response = await this.client.app.agents()
+      if (response.data) {
+        console.log("Raw agents response:", response.data)
+        const processedModes = normalizeModes(response.data)
+        if (processedModes.length > 0) {
+          console.log("Processed modes:", processedModes)
+          console.log("=== MODES FETCH SUCCESS ===")
+          return processedModes
+        }
+      }
+
+      const fallbackResponse = await tauriHttpClient.get(`${this.baseUrl}/app/modes`)
+      if (fallbackResponse.ok) {
+        const fallbackData = await fallbackResponse.json()
+        const processedModes = normalizeModes(fallbackData)
+        if (processedModes.length > 0) {
+          console.log("Processed fallback modes:", processedModes)
+          console.log("=== MODES FETCH SUCCESS ===")
+          return processedModes
+        }
+      }
       
-      const processedModes = modes.map((mode) => ({
-        name: mode.name,
-        model: mode.model,
-        prompt: mode.prompt,
-        tools: mode.tools || {},
-      }))
-      
-      console.log("Processed modes:", processedModes)
-      console.log("=== MODES FETCH SUCCESS ===")
-      
-      return processedModes
+      return []
     } catch (error: unknown) {
       console.error("=== MODES FETCH FAILED ===")
       console.error("Failed to get modes:", error)
@@ -267,7 +193,9 @@ class OpenCodeService {
       console.log("=== FETCHING SESSIONS ===")
       console.log("Base URL:", this.baseUrl)
       
-      const sessions = await this.client.session.list()
+      const response = await this.client.session.list()
+      if (response.error) return []
+      const sessions = response.data ?? []
       console.log("Raw sessions response:", sessions)
       console.log("Number of sessions found:", sessions.length)
       
@@ -303,12 +231,9 @@ class OpenCodeService {
       console.log("Base URL:", this.baseUrl)
       console.log("Session ID:", sessionId)
       
-      // Use HTTP client to call the new /session/:id/children endpoint
-      const response = await tauriHttpClient.get(`${this.baseUrl}/session/${sessionId}/children`)
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-      const children = await response.json()
+      const response = await this.client.session.children({ path: { id: sessionId } })
+      if (response.error) return []
+      const children = response.data ?? []
       
       console.log("Raw session children response:", children)
       console.log("Number of children found:", children.length)
@@ -342,7 +267,10 @@ class OpenCodeService {
 
   async createSession(): Promise<OpenCodeSession | null> {
     try {
-      const session = await this.client.session.create()
+      const response = await this.client.session.create()
+      if (response.error) return null
+      const session = response.data
+      if (!session) return null
       return {
         id: session.id,
         title: session.title,
@@ -357,7 +285,9 @@ class OpenCodeService {
 
   async getMessages(sessionId: string): Promise<OpenCodeMessage[]> {
     try {
-      const messages = await this.client.session.messages(sessionId)
+      const response = await this.client.session.messages({ path: { id: sessionId } })
+      if (response.error) return []
+      const messages = response.data ?? []
       const result: OpenCodeMessage[] = []
 
       for (const message of messages) {
@@ -423,9 +353,11 @@ class OpenCodeService {
       // Use the new SDK chat method
       const chatParams = {
         messageID: finalMessageID,
-        providerID,
-        modelID,
-        mode,
+        model: {
+          providerID,
+          modelID,
+        },
+        agent: mode,
         parts: [
           {
             type: "text" as const,
@@ -443,8 +375,14 @@ class OpenCodeService {
       let lastErr: unknown = null
       for (let i = 0; i < maxSendAttempts; i++) {
         try {
-          const resp = await this.client.session.chat(sessionId, chatParams)
-          console.log("Chat response received:", resp)
+          const resp = await this.client.session.prompt({
+            path: { id: sessionId },
+            body: chatParams,
+          })
+          if (resp.error) {
+            throw resp.error
+          }
+          console.log("Chat response received:", resp.data)
           console.log("✅ Message sent successfully, response will come via Server-Sent Events")
           return finalMessageID
         } catch (e) {
@@ -551,7 +489,8 @@ class OpenCodeService {
 
   async deleteSession(sessionId: string): Promise<boolean> {
     try {
-      await this.client.session.delete(sessionId)
+      const response = await this.client.session.delete({ path: { id: sessionId } })
+      if (response.error) return false
       return true
     } catch (error: unknown) {
       console.error("Failed to delete session:", error)
@@ -559,22 +498,20 @@ class OpenCodeService {
     }
   }
 
-  async updatePermissions(permissions: { edit?: string; bash?: string }): Promise<boolean> {
+  async updatePermissions(permissions: { edit?: Permission; bash?: Permission }): Promise<boolean> {
     try {
       console.log("=== UPDATING PERMISSIONS ===")
       console.log("Permissions:", permissions)
-      
-      const response = await tauriHttpClient.post(`${this.baseUrl}/config/permission`, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ permission: permissions }),
-      })
 
-      console.log("Permission update response:", response.status, response.statusText)
+      const update = buildPermissionUpdate(permissions)
+      if (Object.keys(update).length === 0) {
+        console.log("No permission changes requested")
+        return true
+      }
       
-      if (!response.ok) {
-        console.error("Permission update failed:", response.status)
+      const response = await this.client.config.update({ body: update as OpencodeConfig })
+      if (response.error) {
+        console.error("Permission update failed:", response.error)
         return false
       }
 
@@ -635,37 +572,15 @@ class OpenCodeService {
       console.log("=== FETCHING AGENTS ===")
       console.log("Base URL:", this.baseUrl)
       
-      // Use the new /agent endpoint instead of environment variables
-      const response = await tauriHttpClient.get(`${this.baseUrl}/agent`)
-      console.log("Agents response status:", response.status, response.statusText)
-      
-      if (!response.ok) {
-        console.error("Agents request failed with status:", response.status)
-        return []
-      }
-      
-      const agents = await response.json()
+      const response = await this.client.app.agents()
+      if (response.error) return []
+      const agents = response.data
+      if (!agents) return []
+      console.log("Agents response status: ok")
       console.log("Raw agents response:", agents)
       
-      // Handle different response formats
-      let agentList: any[] = []
-      if (Array.isArray(agents)) {
-        agentList = agents
-      } else if (agents.agents && Array.isArray(agents.agents)) {
-        agentList = agents.agents
-      } else if (typeof agents === 'object') {
-        // Convert object to array if needed
-        agentList = Object.values(agents)
-      }
-      
-      const processedAgents = agentList.map((agent: any) => ({
-        id: agent.id || agent.name || `agent_${Date.now()}`,
-        name: agent.name || agent.id || 'Unknown Agent',
-        description: agent.description,
-        type: agent.type || 'general',
-        tools: agent.tools || [],
-      }))
-      
+      const processedAgents = normalizeAgents(agents)
+
       console.log("Processed agents:", processedAgents)
       console.log("=== AGENTS FETCH SUCCESS ===")
       
@@ -723,3 +638,13 @@ class OpenCodeService {
 }
 
 export const openCodeService = new OpenCodeService()
+
+export type {
+  OpenCodeAgent,
+  OpenCodeMessage,
+  OpenCodeMode,
+  OpenCodePart,
+  OpenCodeProvider,
+  OpenCodeSession,
+  ToastNotification,
+} from "./opencode-types"

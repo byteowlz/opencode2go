@@ -8,6 +8,24 @@ interface ToolComponentProps {
   part: OpenCodePart
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+const readString = (value: unknown): string | undefined => {
+  if (typeof value === "string") return value
+  return undefined
+}
+
+const hasValue = (value: unknown): boolean => {
+  return value !== undefined && value !== null
+}
+
+const formatValue = (value: unknown): string => {
+  if (typeof value === "string") return value
+  return JSON.stringify(value, null, 2)
+}
+
 const ToolHeader = memo(({ part }: { part: OpenCodePart }) => {
   const getIcon = () => {
     switch (part.tool) {
@@ -52,12 +70,15 @@ const ToolHeader = memo(({ part }: { part: OpenCodePart }) => {
 export const BashTool = memo(({ part }: ToolComponentProps) => {
   const input = part.state?.input
   const output = part.state?.output
+  const inputRecord = isRecord(input) ? input : undefined
+  const command = readString(inputRecord?.command) ?? readString(input)
+  const outputText = hasValue(output) ? formatValue(output) : undefined
 
   return (
     <div className="tool-component bash-tool">
       <ToolHeader part={part} />
       <div className="tool-content">
-        {input && (
+        {command && (
           <div className="tool-input">
             <div className="tool-section-header">Command</div>
             <SyntaxHighlighter
@@ -71,14 +92,14 @@ export const BashTool = memo(({ part }: ToolComponentProps) => {
                 lineHeight: '1.4'
               }}
             >
-              {input.command || input}
+              {command}
             </SyntaxHighlighter>
           </div>
         )}
-        {output && (
+        {outputText && (
           <div className="tool-output">
             <div className="tool-section-header">Output</div>
-            <pre className="tool-output-text">{output}</pre>
+            <pre className="tool-output-text">{outputText}</pre>
           </div>
         )}
       </div>
@@ -89,17 +110,22 @@ export const BashTool = memo(({ part }: ToolComponentProps) => {
 export const EditTool = memo(({ part }: ToolComponentProps) => {
   const input = part.state?.input
   const output = part.state?.output
+  const inputRecord = isRecord(input) ? input : undefined
+  const filePath = readString(inputRecord?.filePath) ?? readString(inputRecord?.file)
+  const oldString = readString(inputRecord?.oldString)
+  const newString = readString(inputRecord?.newString)
+  const outputText = hasValue(output) ? formatValue(output) : undefined
 
   return (
     <div className="tool-component edit-tool">
       <ToolHeader part={part} />
       <div className="tool-content">
-        {input && (
+        {filePath && (
           <div className="tool-input">
             <div className="tool-section-header">
-              Edit: {input.filePath || input.file}
+              Edit: {filePath}
             </div>
-            {input.oldString && (
+            {oldString && (
               <div className="edit-section">
                 <div className="edit-label edit-remove">− Remove</div>
                 <SyntaxHighlighter
@@ -114,11 +140,11 @@ export const EditTool = memo(({ part }: ToolComponentProps) => {
                     backgroundColor: 'rgba(255, 85, 85, 0.1)'
                   }}
                 >
-                  {input.oldString}
+                  {oldString}
                 </SyntaxHighlighter>
               </div>
             )}
-            {input.newString && (
+            {newString && (
               <div className="edit-section">
                 <div className="edit-label edit-add">+ Add</div>
                 <SyntaxHighlighter
@@ -133,16 +159,16 @@ export const EditTool = memo(({ part }: ToolComponentProps) => {
                     backgroundColor: 'rgba(80, 250, 123, 0.1)'
                   }}
                 >
-                  {input.newString}
+                  {newString}
                 </SyntaxHighlighter>
               </div>
             )}
           </div>
         )}
-        {output && (
+        {outputText && (
           <div className="tool-output">
             <div className="tool-section-header">Result</div>
-            <pre className="tool-output-text">{output}</pre>
+            <pre className="tool-output-text">{outputText}</pre>
           </div>
         )}
       </div>
@@ -152,7 +178,9 @@ export const EditTool = memo(({ part }: ToolComponentProps) => {
 
 export const TodoWriteTool = memo(({ part }: ToolComponentProps) => {
   const input = part.state?.input
-  const todos = input?.todos || []
+  const inputRecord = isRecord(input) ? input : undefined
+  const todosValue = inputRecord?.todos
+  const todos = Array.isArray(todosValue) ? todosValue.filter((item) => isRecord(item)) : []
 
   return (
     <div className="tool-component todo-tool">
@@ -160,22 +188,31 @@ export const TodoWriteTool = memo(({ part }: ToolComponentProps) => {
       <div className="tool-content">
         <div className="tool-section-header">Todo List</div>
         <div className="todo-list">
-          {todos.map((todo: any, index: number) => (
-            <div key={todo.id || index} className={`todo-item todo-${todo.status}`}>
+          {todos.map((todo, index) => {
+            const item = todo as Record<string, unknown>
+            const status = readString(item.status) ?? "pending"
+            const content = readString(item.content) ?? ""
+            const priority = readString(item.priority) ?? "normal"
+            const id = readString(item.id)
+            const key = id ?? `${index}`
+
+            return (
+              <div key={key} className={`todo-item todo-${status}`}>
               <div className="todo-status">
-                {todo.status === "completed" ? "✓" : 
-                 todo.status === "in_progress" ? "●" : 
-                 todo.status === "cancelled" ? "✗" : "○"}
+                {status === "completed" ? "✓" : 
+                 status === "in_progress" ? "●" : 
+                 status === "cancelled" ? "✗" : "○"}
               </div>
               <div className="todo-content">
-                <div className="todo-text">{todo.content}</div>
+                <div className="todo-text">{content}</div>
                 <div className="todo-meta">
-                  <span className="todo-priority">{todo.priority}</span>
-                  <span className="todo-status-text">{todo.status}</span>
+                  <span className="todo-priority">{priority}</span>
+                  <span className="todo-status-text">{status}</span>
                 </div>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>
@@ -185,19 +222,22 @@ export const TodoWriteTool = memo(({ part }: ToolComponentProps) => {
 export const ReadTool = memo(({ part }: ToolComponentProps) => {
   const input = part.state?.input
   const output = part.state?.output
+  const inputRecord = isRecord(input) ? input : undefined
+  const filePath = readString(inputRecord?.filePath) ?? readString(inputRecord?.file)
+  const outputText = hasValue(output) ? formatValue(output) : undefined
 
   return (
     <div className="tool-component read-tool">
       <ToolHeader part={part} />
       <div className="tool-content">
-        {input && (
+        {filePath && (
           <div className="tool-input">
             <div className="tool-section-header">
-              Reading: {input.filePath || input.file}
+              Reading: {filePath}
             </div>
           </div>
         )}
-        {output && (
+        {outputText && (
           <div className="tool-output">
             <div className="tool-section-header">File Content</div>
             <SyntaxHighlighter
@@ -213,7 +253,7 @@ export const ReadTool = memo(({ part }: ToolComponentProps) => {
                 overflow: 'auto'
               }}
             >
-              {output}
+              {outputText}
             </SyntaxHighlighter>
           </div>
         )}
@@ -224,17 +264,20 @@ export const ReadTool = memo(({ part }: ToolComponentProps) => {
 
 export const WriteTool = memo(({ part }: ToolComponentProps) => {
   const input = part.state?.input
+  const inputRecord = isRecord(input) ? input : undefined
+  const filePath = readString(inputRecord?.filePath) ?? readString(inputRecord?.file)
+  const content = readString(inputRecord?.content)
 
   return (
     <div className="tool-component write-tool">
       <ToolHeader part={part} />
       <div className="tool-content">
-        {input && (
+        {filePath && (
           <div className="tool-input">
             <div className="tool-section-header">
-              Writing: {input.filePath || input.file}
+              Writing: {filePath}
             </div>
-            {input.content && (
+            {content && (
               <SyntaxHighlighter
                 style={oneDark as any}
                 language="text"
@@ -248,7 +291,7 @@ export const WriteTool = memo(({ part }: ToolComponentProps) => {
                   overflow: 'auto'
                 }}
               >
-                {input.content}
+                {content}
               </SyntaxHighlighter>
             )}
           </div>
@@ -261,21 +304,22 @@ export const WriteTool = memo(({ part }: ToolComponentProps) => {
 export const FallbackTool = memo(({ part }: ToolComponentProps) => {
   const input = part.state?.input
   const output = part.state?.output
+  const outputText = hasValue(output) ? formatValue(output) : undefined
 
   return (
     <div className="tool-component fallback-tool">
       <ToolHeader part={part} />
       <div className="tool-content">
-        {input && (
+        {hasValue(input) && (
           <div className="tool-input">
             <div className="tool-section-header">Input</div>
-            <pre className="tool-input-text">{JSON.stringify(input, null, 2)}</pre>
+            <pre className="tool-input-text">{formatValue(input)}</pre>
           </div>
         )}
-        {output && (
+        {outputText && (
           <div className="tool-output">
             <div className="tool-section-header">Output</div>
-            <pre className="tool-output-text">{typeof output === 'string' ? output : JSON.stringify(output, null, 2)}</pre>
+            <pre className="tool-output-text">{outputText}</pre>
           </div>
         )}
       </div>

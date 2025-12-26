@@ -157,6 +157,9 @@ export const MessagePart = memo(({ part }: MessagePartProps) => {
 
   // Handle snapshot parts
   if (part.type === "snapshot") {
+    const snapshotData = part.snapshot?.data
+    const hasSnapshotData = snapshotData !== undefined && snapshotData !== null
+
     return (
       <div className="message-part snapshot-part">
         <div className="snapshot-container">
@@ -178,10 +181,10 @@ export const MessagePart = memo(({ part }: MessagePartProps) => {
               </a>
             </div>
           )}
-          {part.snapshot?.data && (
+          {hasSnapshotData && (
             <div className="snapshot-data">
               <pre className="snapshot-data-content">
-                {JSON.stringify(part.snapshot.data, null, 2)}
+                {JSON.stringify(snapshotData, null, 2)}
               </pre>
             </div>
           )}

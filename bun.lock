@@ -4,7 +4,7 @@
     "": {
       "name": "opencode2go",
       "dependencies": {
-        "@opencode-ai/sdk": "^0.1.0-alpha.21",
+        "@opencode-ai/sdk": "^1.0.203",
         "@tauri-apps/api": "^2.6.0",
         "@tauri-apps/plugin-http": "^2.5.0",
         "@tauri-apps/plugin-opener": "^2",
@@ -131,7 +131,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.29", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-uw6guiW/gcAGPDhLmd77/6lW8QLeiV5RUTsAX46Db6oLhGaVj4lhnPwb184s1bkc8kdVg/+h988dro8GRDpmYQ=="],
 
-    "@opencode-ai/sdk": ["@opencode-ai/sdk@0.1.0-alpha.21", "", {}, "sha512-e/F/Re2lISHrZ9CrRKPwiqRabUjv4eo0iqFzXWWLzwMNEqV0A8+0sLQC9Iq4ug1Zm/1Qcqc9oLpxedb4PMF6aA=="],
+    "@opencode-ai/sdk": ["@opencode-ai/sdk@1.0.203", "", {}, "sha512-Chr/eWlb5jB+aluf70t9H0zv0tkb+otVnnkZQg3xrB7dtHJc6SxqsixAjTGnND6v3mURwchYb0UdcnGM7dOcng=="],
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.0-beta.19", "", {}, "sha512-3FL3mnMbPu0muGOCaKAhhFEYmqv9eTfPSJRJmANrCwtgK8VuxpsZDGK+m0LYAGoyO8+0j5uRe4PeyPDK1yA/hA=="],
 
